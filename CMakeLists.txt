@@ -38,6 +38,7 @@ set(HYPER_RUNTIME_SOURCES
     src/thread_spawn.c
     src/stack.c
     src/stdio.c
+    src/stream.c
     src/heap.c
     src/stdlib.c
     src/dlfcn.c

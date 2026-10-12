@@ -54,6 +54,7 @@ hyper_call_result_t hyper_capability_channel_receive(hyper_native_handle_t endpo
 						     size_t byte_capacity,
 						     hyper_native_capability_receive_slot_t *slots,
 						     size_t slot_count);
+hyper_call_result_t hyper_console_discard_input(hyper_native_handle_t console);
 hyper_call_result_t hyper_console_read(hyper_native_handle_t console, void *bytes, size_t capacity);
 hyper_call_result_t hyper_console_write(hyper_native_handle_t console, const void *bytes,
 					size_t count);
@@ -182,6 +183,8 @@ hyper_native_status_t hyper_process_builder_add_handle(hyper_native_handle_t bui
 hyper_native_status_t hyper_process_builder_seal(hyper_native_handle_t builder);
 hyper_call_result_t hyper_process_builder_start(hyper_native_handle_t builder);
 hyper_native_status_t hyper_process_builder_abort(hyper_native_handle_t builder);
+hyper_call_result_t hyper_process_derive_observer(hyper_native_handle_t process);
+hyper_native_status_t hyper_task_group_request_stop(hyper_native_handle_t group);
 hyper_native_status_t hyper_process_request_stop(hyper_native_handle_t process);
 hyper_call_result_t hyper_process_get_info(hyper_native_handle_t process,
 					   hyper_native_process_info_t *info);

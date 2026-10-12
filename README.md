@@ -217,26 +217,40 @@ See the [std runtime contract](../../sdk/toolchain/rust-std/README.md) and the
 [`hyper/std.h`](include/hyper/std.h) / [`hyper/thread.h`](include/hyper/thread.h)
 interfaces. These are SDK interfaces, not additions to the kernel syscall ABI.
 
-Interactive stdin retains `stdio.input` and carries a second, real
-`stdio.terminal-input` capability for the same byte-channel endpoint. Both grant
-INSPECT so the runtime can verify object identity. The shell shares that queue
-with an unredirected foreground process: only a process that reads consumes
-input. Pipelines and file redirections omit the terminal alias and stay binary.
-Default `std::process::Command` inheritance preserves both capabilities.
+Interactive standard streams inherit typed capability-channel connectors
+(`hyper/stream.h`), then open one private byte-channel request connection per
+process and stream. Plain pipes retain their existing byte-channel byte
+semantics and buffering. `std::process::Command` inherits connectors, never a
+parent's response channel; redirected streams remain pipes. Inheritance preserves
+its terminal lease and does not grant a new foreground lease. A caller handing
+input to a child must stop its own reads and collect any pending cancellation,
+or explicitly delegate foreground ownership through the terminal API. Distinct
+reply channels prevent response stealing, but do not decide which process
+should consume keyboard input.
 
-The console-input service splits command/EOF records and normalizes CR and CRLF
-to LF across hardware reads. Terminal std reads also accept CR and interpret a
-standalone Ctrl-D record as one EOF indication; the endpoint remains open for
-the next shell command. Native channel readers, including `vmm console`, receive
-the normalized line endings and retain the Ctrl-D byte.
-This is an interactive terminal path, not a byte-transparent serial tunnel; the
-kernel Console API remains unchanged. This is not a full POSIX canonical tty.
+`READ` requests specify the exact maximum byte count. A successful reply commits
+only that prefix, so a one-byte shell read cannot prefetch the following pasted
+command into a disposable child. The Rust `Stdin` adapter bypasses its 8 KiB
+prefetch buffer for these request streams while preserving ordinary pipe
+buffering. Explicit `BufRead` is still a buffering opt-in: callers own and must
+account for any bytes they prefetch before handing input to another process.
+`hyper_os::stream::ProcessInput` exclusively borrows the same runtime connection
+for asynchronous reads and Native waits. Ordinary std reads return `BUSY` during
+that borrow. Cancellation resolves the original read exactly once: either its
+already committed data or a cancelled result. Dropping an unfinished borrow
+closes its private connection; a later std read reconnects without stale replies.
 
-The standard input purpose is unchanged. Older std runtimes can still read that
-capability, but do not implement the terminal alias convention. Consumers that
-validate the old exact rights allowlist must update to permit INSPECT. HypeR ships
-its service manifests, SDK and std runtime together; cross-version terminal EOF
-behavior is not promised.
+`WRITE` replies report an accepted prefix, and an ordered `FENCE` follows earlier
+writes on that same connection. `std::io::Write::flush` sends this fence after
+flushing its local buffer. The physical console fence means bytes reached the
+kernel's output queue; it does not claim the UART has transmitted them. Per-stream
+metadata drives `IsTerminal`; pipes and raw bootstrap streams report false.
+
+The runtime performs no character conversion, line editing, echo, flow control
+or Ctrl-D interpretation. `console-raw` supplies byte-transparent bootstrap
+streams and independently bounded service-log ingress. The formal terminal
+service supplies terminal policy and scoped client controls from `lib/terminal`.
+Consequently bootstrap and fallback input do not depend on the formal terminal.
 
 ### Runtime system configuration
 

@@ -20,7 +20,9 @@ static const uint32_t purposes[] = {
 	UINT32_C(0x80030001),
 	UINT32_C(0x80030002),
 	UINT32_C(0x80030003),
-	UINT32_C(0x80030004), /* terminal stdin; preserve provenance on inheritance */
+	UINT32_C(0x80030011), /* generic input connector */
+	UINT32_C(0x80030012), /* generic output connector */
+	UINT32_C(0x80030013), /* generic error connector */
 };
 static hyper_native_handle_t retained[sizeof(purposes) / sizeof(purposes[0])];
 

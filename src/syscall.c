@@ -109,6 +109,11 @@ hyper_call_result_t hyper_capability_channel_receive(hyper_native_handle_t endpo
 				  (uintptr_t)bytes, byte_capacity, (uintptr_t)slots, slot_count);
 }
 
+hyper_call_result_t hyper_console_discard_input(hyper_native_handle_t console)
+{
+    return hyper_native_call6(HYPER_NATIVE_SYS_CONSOLE_DISCARD_INPUT, console, 0, 0, 0, 0, 0);
+}
+
 hyper_call_result_t hyper_console_read(hyper_native_handle_t console, void *bytes, size_t capacity)
 {
 	return hyper_native_call6(HYPER_NATIVE_SYS_CONSOLE_READ, console, 0, (uintptr_t)bytes,
@@ -444,6 +449,16 @@ hyper_native_status_t hyper_process_builder_abort(hyper_native_handle_t builder)
 {
 	return hyper_native_call6(HYPER_NATIVE_SYS_PROCESS_BUILDER_ABORT, builder, 0, 0, 0, 0, 0)
 		.status;
+}
+
+hyper_call_result_t hyper_process_derive_observer(hyper_native_handle_t process)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_PROCESS_DERIVE_OBSERVER, process, 0, 0, 0, 0, 0);
+}
+
+hyper_native_status_t hyper_task_group_request_stop(hyper_native_handle_t group)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_TASK_GROUP_REQUEST_STOP, group, 0, 0, 0, 0, 0).status;
 }
 
 hyper_native_status_t hyper_process_request_stop(hyper_native_handle_t process)
