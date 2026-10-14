@@ -111,7 +111,7 @@ hyper_call_result_t hyper_capability_channel_receive(hyper_native_handle_t endpo
 
 hyper_call_result_t hyper_console_discard_input(hyper_native_handle_t console)
 {
-    return hyper_native_call6(HYPER_NATIVE_SYS_CONSOLE_DISCARD_INPUT, console, 0, 0, 0, 0, 0);
+	return hyper_native_call6(HYPER_NATIVE_SYS_CONSOLE_DISCARD_INPUT, console, 0, 0, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_console_read(hyper_native_handle_t console, void *bytes, size_t capacity)
@@ -458,7 +458,8 @@ hyper_call_result_t hyper_process_derive_observer(hyper_native_handle_t process)
 
 hyper_native_status_t hyper_task_group_request_stop(hyper_native_handle_t group)
 {
-	return hyper_native_call6(HYPER_NATIVE_SYS_TASK_GROUP_REQUEST_STOP, group, 0, 0, 0, 0, 0).status;
+	return hyper_native_call6(HYPER_NATIVE_SYS_TASK_GROUP_REQUEST_STOP, group, 0, 0, 0, 0, 0)
+		.status;
 }
 
 hyper_native_status_t hyper_process_request_stop(hyper_native_handle_t process)
@@ -880,5 +881,45 @@ hyper_native_status_t hyper_vmar_map_file(hyper_native_handle_t vmar, hyper_nati
 {
 	return hyper_native_call6(HYPER_NATIVE_SYS_VMAR_MAP_FILE, vmar, file, protection,
 				  (uintptr_t)mapping, mapping_size, 0)
+		.status;
+}
+
+hyper_native_status_t hyper_process_builder_set_memory_lock(hyper_native_handle_t builder,
+							    int enabled)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_PROCESS_BUILDER_SET_MEMORY_LOCK, builder,
+				  enabled != 0, 0, 0, 0, 0)
+		.status;
+}
+
+hyper_call_result_t
+hyper_filesystem_begin_root_switch(hyper_native_handle_t directory,
+				   const hyper_native_filesystem_root_switch_t *request)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_FILESYSTEM_BEGIN_ROOT_SWITCH, directory,
+				  (uintptr_t)request, 0, 0, 0, 0);
+}
+
+hyper_native_status_t hyper_filesystem_finish_root_switch(hyper_native_handle_t transition,
+							  int commit)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_FILESYSTEM_FINISH_ROOT_SWITCH, transition,
+				  commit != 0, 0, 0, 0, 0)
+		.status;
+}
+
+hyper_native_status_t hyper_vmar_lock_memory(hyper_native_handle_t vmar, uintptr_t address,
+					     size_t size, uint64_t flags)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_VMAR_LOCK_MEMORY, vmar, address, size, flags, 0,
+				  0)
+		.status;
+}
+
+hyper_native_status_t hyper_vmar_unlock_memory(hyper_native_handle_t vmar, uintptr_t address,
+					       size_t size, uint64_t flags)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_VMAR_UNLOCK_MEMORY, vmar, address, size, flags,
+				  0, 0)
 		.status;
 }

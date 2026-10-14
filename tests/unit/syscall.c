@@ -48,6 +48,16 @@ static void transport(hyper_native_status_t status)
 	STATUS(hyper_vmar_map_file(handle, other, loader, &mapping, sizeof(mapping)));
 	EXPECT(FILESYSTEM_SWITCH_ROOT, handle, (uintptr_t)&root_switch);
 	RESULT(hyper_filesystem_switch_root(handle, &root_switch));
+	EXPECT(FILESYSTEM_BEGIN_ROOT_SWITCH, handle, (uintptr_t)&root_switch);
+	RESULT(hyper_filesystem_begin_root_switch(handle, &root_switch));
+	EXPECT(FILESYSTEM_FINISH_ROOT_SWITCH, handle, 1);
+	STATUS(hyper_filesystem_finish_root_switch(handle, 1));
+	EXPECT(VMAR_LOCK_MEMORY, handle, offset, deadline, options);
+	STATUS(hyper_vmar_lock_memory(handle, offset, deadline, options));
+	EXPECT(VMAR_UNLOCK_MEMORY, handle, 0, 0, HYPER_NATIVE_VMAR_MEMORY_CURRENT);
+	STATUS(hyper_vmar_unlock_memory(handle, 0, 0, HYPER_NATIVE_VMAR_MEMORY_CURRENT));
+	EXPECT(PROCESS_BUILDER_SET_MEMORY_LOCK, handle, 1);
+	STATUS(hyper_process_builder_set_memory_lock(handle, 1));
 	EXPECT(SYSTEM_CONFIG, other);
 	RESULT(hyper_system_config(other));
 	EXPECT(ABI_QUERY, 0);

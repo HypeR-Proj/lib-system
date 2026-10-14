@@ -97,6 +97,40 @@ fn transport(status: HyperNativeStatus) {
             [handle, &request as *const _ as u64, 0, 0, 0, 0]
         );
         result(sys::filesystem_switch_root(handle, &request), status);
+        expect!(
+            HYPER_NATIVE_SYS_FILESYSTEM_BEGIN_ROOT_SWITCH,
+            [handle, &request as *const _ as u64, 0, 0, 0, 0]
+        );
+        result(sys::filesystem_begin_root_switch(handle, &request), status);
+        expect!(
+            HYPER_NATIVE_SYS_FILESYSTEM_FINISH_ROOT_SWITCH,
+            [handle, 1, 0, 0, 0, 0]
+        );
+        result(sys::filesystem_finish_root_switch(handle, true), status);
+        expect!(
+            HYPER_NATIVE_SYS_VMAR_LOCK_MEMORY,
+            [handle, offset, deadline, options as u64, 0, 0]
+        );
+        assert_eq!(
+            sys::vmar_lock_memory(handle, offset, deadline, options as u64),
+            status
+        );
+        check_consumed();
+        expect!(
+            HYPER_NATIVE_SYS_VMAR_UNLOCK_MEMORY,
+            [handle, 0, 0, HYPER_NATIVE_VMAR_MEMORY_CURRENT, 0, 0]
+        );
+        assert_eq!(
+            sys::vmar_unlock_memory(handle, 0, 0, HYPER_NATIVE_VMAR_MEMORY_CURRENT),
+            status
+        );
+        check_consumed();
+        expect!(
+            HYPER_NATIVE_SYS_PROCESS_BUILDER_SET_MEMORY_LOCK,
+            [handle, 1, 0, 0, 0, 0]
+        );
+        assert_eq!(sys::process_builder_set_memory_lock(handle, true), status);
+        check_consumed();
         let affinity_words = [3_u64, 1_u64 << 63];
         expect!(
             HYPER_NATIVE_SYS_VIRTUAL_CPU_SET_AFFINITY,

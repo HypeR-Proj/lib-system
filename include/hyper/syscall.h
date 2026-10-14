@@ -300,6 +300,20 @@ hyper_call_result_t hyper_directory_open_file_with_options(hyper_native_handle_t
 							   const void *path, size_t path_length,
 							   uint64_t rights, uint32_t options,
 							   uint32_t mode);
+/* Residency is independent of DMA pinning. CURRENT selects all existing
+ * mappings of this VMAR, with address=size=0; future mappings are unaffected. */
+hyper_native_status_t hyper_vmar_lock_memory(hyper_native_handle_t vmar, uintptr_t address,
+					     size_t size, uint64_t flags);
+hyper_native_status_t hyper_vmar_unlock_memory(hyper_native_handle_t vmar, uintptr_t address,
+					       size_t size, uint64_t flags);
+hyper_native_status_t hyper_process_builder_set_memory_lock(hyper_native_handle_t builder,
+							    int enabled);
+hyper_call_result_t
+hyper_filesystem_begin_root_switch(hyper_native_handle_t directory,
+				   const hyper_native_filesystem_root_switch_t *request);
+hyper_native_status_t hyper_filesystem_finish_root_switch(hyper_native_handle_t transition,
+							  int commit);
+
 #ifdef __cplusplus
 }
 #endif
