@@ -101,6 +101,8 @@ static void transport(hyper_native_status_t status)
 	STATUS(hyper_virtual_cpu_set_affinity(handle, affinity_words, 2));
 	EXPECT(THREAD_CREATE, handle, other, offset, deadline);
 	RESULT(hyper_thread_create(handle, other, offset, deadline, NULL, 0));
+	EXPECT(THREAD_SET_CURRENT_NAME, (uintptr_t)bytes, sizeof(bytes));
+	STATUS(hyper_thread_set_current_name(bytes, sizeof(bytes)));
 	EXPECT(THREAD_CREATE, handle, other, offset, deadline, (uintptr_t)affinity_words, 2);
 	RESULT(hyper_thread_create(handle, other, offset, deadline, affinity_words, 2));
 	EXPECT(PROCESS_BUILDER_CREATE, handle, other, offset, deadline, loader);

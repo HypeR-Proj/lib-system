@@ -272,6 +272,13 @@ independently checks VMAR alignment, range overflow, ownership and permissions;
 raw `thread_create` takes an aligned SP, not a stack descriptor, so callers must
 supply their own stack reservation and guards.
 
+`hyper_thread_set_current_name(name, length)` changes the caller's diagnostic
+label without an additional capability. Names are 1–64 UTF-8 bytes, exclude
+the NUL terminator and cannot contain control characters; rejected input leaves
+the previous label intact. It does not rename the Process or another Thread.
+Rust callers use `hyper_os::thread::set_current_name`; `std::thread::Builder::name`
+also publishes the worker's name before its closure runs.
+
 This does not change the current kernel/ELF 4 KiB configuration or fixed device
 protocol layouts; making those configurable is a separate change.
 

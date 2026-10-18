@@ -107,6 +107,8 @@ static _Noreturn void reaper(void *argument)
 {
 	if (hyper_runtime_thread_attach_stack(argument) != HYPER_NATIVE_STATUS_OK)
 		hyper_process_exit(HYPER_NATIVE_STATUS_NO_MEMORY);
+	/* This runtime-owned worker has no language-level Thread/Builder. */
+	(void)hyper_thread_set_current_name("thread-reaper", sizeof("thread-reaper") - 1);
 	for (;;) {
 		hyper_native_wait_set_event_t event;
 		hyper_call_result_t result =

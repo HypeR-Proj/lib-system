@@ -21,6 +21,13 @@ static unsigned allocated_stacks, live_registrations, registration_limit = 1024;
 static int fail_start, fail_add;
 static size_t smallest_requested_stack = SIZE_MAX;
 
+hyper_native_status_t hyper_thread_set_current_name(const void *name, size_t length)
+{
+	assert(length == sizeof("thread-reaper") - 1);
+	assert(!memcmp(name, "thread-reaper", length));
+	return HYPER_NATIVE_STATUS_OK;
+}
+
 hyper_native_status_t hyper_stack_create(size_t size, size_t capacity, hyper_stack_t **out)
 {
 	if (size < smallest_requested_stack)

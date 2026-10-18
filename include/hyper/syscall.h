@@ -250,6 +250,9 @@ hyper_call_result_t hyper_thread_create(uint64_t entry, uint64_t initial_sp, uin
 					uint64_t argument, const uint64_t *affinity_words,
 					size_t affinity_word_count);
 hyper_native_status_t hyper_thread_start(hyper_native_handle_t thread);
+/* Diagnostic name of the caller only: 1..64 UTF-8 bytes, no control characters
+ * or trailing NUL. Invalid input leaves the old name unchanged. */
+hyper_native_status_t hyper_thread_set_current_name(const void *name, size_t length);
 hyper_native_status_t hyper_thread_request_stop(hyper_native_handle_t thread);
 hyper_native_status_t hyper_atomic_wait(const uint32_t *address, uint32_t expected,
 					uint64_t deadline);

@@ -250,6 +250,15 @@ fn transport(status: HyperNativeStatus) {
         );
         let affinity = [3_u64, 1_u64 << 63];
         expect!(
+            HYPER_NATIVE_SYS_THREAD_SET_CURRENT_NAME,
+            [bytes.as_ptr() as u64, bytes.len() as u64, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            sys::thread_set_current_name(bytes.as_ptr(), bytes.len()),
+            status
+        );
+        check_consumed();
+        expect!(
             HYPER_NATIVE_SYS_THREAD_CREATE,
             [handle, other, offset, deadline, affinity.as_ptr() as u64, 2]
         );

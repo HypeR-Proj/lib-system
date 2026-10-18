@@ -659,6 +659,12 @@ hyper_native_status_t hyper_thread_start(hyper_native_handle_t thread)
 	return hyper_native_call6(HYPER_NATIVE_SYS_THREAD_START, thread, 0, 0, 0, 0, 0).status;
 }
 
+hyper_native_status_t hyper_thread_set_current_name(const void *name, size_t length)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_THREAD_SET_CURRENT_NAME, (uintptr_t)name,
+				  length, 0, 0, 0, 0).status;
+}
+
 hyper_native_status_t hyper_thread_request_stop(hyper_native_handle_t thread)
 {
 	return hyper_native_call6(HYPER_NATIVE_SYS_THREAD_REQUEST_STOP, thread, 0, 0, 0, 0, 0)
