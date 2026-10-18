@@ -468,6 +468,52 @@ hyper_native_status_t hyper_process_request_stop(hyper_native_handle_t process)
 		.status;
 }
 
+
+hyper_call_result_t hyper_process_builder_retain(hyper_native_handle_t builder, uint64_t max_bytes, uint64_t timeout_ns)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_PROCESS_BUILDER_RETAIN, builder, max_bytes, timeout_ns, 0, 0, 0);
+}
+
+hyper_call_result_t hyper_process_retirement_open_view(hyper_native_handle_t control)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_PROCESS_RETIREMENT_OPEN_VIEW, control, 0, 0, 0, 0, 0);
+}
+
+hyper_call_result_t hyper_process_retirement_release(hyper_native_handle_t control)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_PROCESS_RETIREMENT_RELEASE, control, 0, 0, 0, 0, 0);
+}
+
+hyper_call_result_t hyper_crash_view_read(hyper_native_handle_t view, uintptr_t address, void *output, size_t length)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_CRASH_VIEW_READ, view, address, (uintptr_t)output, length, 0, 0);
+}
+
+hyper_call_result_t hyper_process_retirement_get_info(hyper_native_handle_t object, hyper_native_process_retirement_info_t *output)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_PROCESS_RETIREMENT_GET_INFO, object, (uintptr_t)output, sizeof(*output), 0, 0, 0);
+}
+
+hyper_call_result_t hyper_crash_view_get_info(hyper_native_handle_t object, hyper_native_process_retirement_info_t *output)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_CRASH_VIEW_GET_INFO, object, (uintptr_t)output, sizeof(*output), 0, 0, 0);
+}
+
+hyper_call_result_t hyper_crash_view_thread(hyper_native_handle_t object, uint64_t index, hyper_native_crash_thread_t *output)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_CRASH_VIEW_THREAD, object, index, (uintptr_t)output, sizeof(*output), 0, 0);
+}
+
+hyper_call_result_t hyper_crash_view_mapping(hyper_native_handle_t object, uint64_t index, hyper_native_crash_mapping_t *output)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_CRASH_VIEW_MAPPING, object, index, (uintptr_t)output, sizeof(*output), 0, 0);
+}
+
+hyper_call_result_t hyper_crash_view_handle(hyper_native_handle_t object, uint64_t index, hyper_native_crash_handle_t *output)
+{
+	return hyper_native_call6(HYPER_NATIVE_SYS_CRASH_VIEW_HANDLE, object, index, (uintptr_t)output, sizeof(*output), 0, 0);
+}
+
 hyper_call_result_t hyper_process_get_info(hyper_native_handle_t process,
 					   hyper_native_process_info_t *info)
 {
