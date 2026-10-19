@@ -44,7 +44,7 @@ __attribute__((noreturn)) void hyper_runtime_start(const uintptr_t *initial_stac
  * Creates final storage but does not itself switch SP or retire bootstrap. */
 hyper_native_status_t hyper_runtime_initialize(const uintptr_t *initial_stack);
 /* Immutable application startup view, valid after runtime initialization.
- * Bootstrap-stack VMAR is reserved for the handoff and omitted. */
+ * Bootstrap-stack VMAR and runtime invocation capabilities are omitted. */
 const hyper_startup_t *hyper_runtime_startup(void);
 
 /* Borrowed process-lifetime runtime copy, or zero when not delegated with

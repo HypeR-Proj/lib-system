@@ -190,8 +190,9 @@ ctest --test-dir target/sdk-lib/unit --output-on-failure
 ```
 
 `syscall-veneer` and `syscall-rust-transport` intercept the production C and
-raw Rust SDK calls at `hyper_native_call6`. Their independent slot expectations
-cover argument arities, reserved zeros, high-bit scalar transport, pointers,
+raw Rust SDK calls at `hyper_native_invoke6`. Their independent slot expectations
+cover target handles, object-local operations, business argument arities, reserved
+zeros, high-bit scalar transport, pointers,
 implicit record sizes, and all three result fields on success and failure.
 The Rust test needs the repository's host Rust compiler and Python, but no SDK
 sysroot. It compiles the real crates and links the C veneers rather than copying

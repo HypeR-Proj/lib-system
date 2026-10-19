@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <hyper/launch.h>
+#include <hyper/invocation.h>
 #include <hyper/startup.h>
 #include <hyper/stack.h>
 #include <hyper/syscall.h>
@@ -52,6 +53,7 @@ _Noreturn void hyper_runtime_start(const uintptr_t *stack, void (*entry)(const u
 	size_t page;
 	if (!entry || continuation ||
 	    hyper_startup_parse(stack, &original) != HYPER_NATIVE_STATUS_OK ||
+	    hyper_native_initialize_invocation(&original) != HYPER_NATIVE_STATUS_OK ||
 	    hyper_page_size(&page) != HYPER_NATIVE_STATUS_OK)
 		hyper_process_exit(HYPER_NATIVE_STATUS_BAD_STATE);
 	uintptr_t base = 0, capacity = 0;

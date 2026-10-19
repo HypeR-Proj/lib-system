@@ -3,6 +3,7 @@
  */
 
 #include <hyper/launch.h>
+#include <hyper/invocation.h>
 #include <hyper/heap.h>
 #include <hyper/thread.h>
 #include <hyper/system.h>
@@ -51,6 +52,9 @@ hyper_native_status_t hyper_runtime_initialize(const uintptr_t *initial_stack)
 	if (status != HYPER_NATIVE_STATUS_OK) {
 		return status;
 	}
+	status = hyper_native_initialize_invocation(&startup);
+	if (status != HYPER_NATIVE_STATUS_OK)
+		return status;
 	status = hyper_heap_initialize(&startup);
 	if (status != HYPER_NATIVE_STATUS_OK)
 		return status;
@@ -65,12 +69,17 @@ hyper_native_status_t hyper_runtime_initialize(const uintptr_t *initial_stack)
 	status = hyper_runtime_capabilities_initialize(&startup);
 	if (status != HYPER_NATIVE_STATUS_OK)
 		return status;
-	/* The one-way bootstrap handoff consumes this handle. Do not expose it
-	 * to language startup owners, which may close every delegated handle. */
+	/* The handoff consumes its stack VMAR; invocation capabilities remain owned
+	 * by this runtime. Language startup owners must not close either category. */
 	size_t count = 0;
 	for (size_t i = 0; i < startup.handle_count; ++i) {
 		if (startup.handles[i].purpose !=
-		    HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_INITIAL_STACK_VMAR)
+			    HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_INITIAL_STACK_VMAR &&
+		    startup.handles[i].purpose !=
+			    HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_EXECUTION_CONTEXT &&
+		    startup.handles[i].purpose !=
+			    HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_OBJECT_FACTORY &&
+		    startup.handles[i].purpose != HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_SYSTEM_INFO)
 			application_handles[count++] = startup.handles[i];
 	}
 	hyper_auxiliary_entry_t *auxiliary =

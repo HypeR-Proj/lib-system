@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Runs the actual raw Rust SDK against the C capture boundary. Some wrappers
-//! call C veneers; others encode call6 directly. Both must obey the same ABI.
+//! call C veneers; others encode invoke6 directly. Both must obey the same ABI.
 use hyper_sys::{self as sys, CallResult, abi::*};
 
 unsafe extern "C" {
-    fn expect_call(number: u64, arguments: *const u64, status: HyperNativeStatus);
+    fn expect_call(target: u64, operation: u64, arguments: *const u64, status: HyperNativeStatus);
     fn check_consumed();
 }
 
@@ -34,9 +34,9 @@ fn transport(status: HyperNativeStatus) {
         flags: 0,
     }; 2];
     macro_rules! expect {
-        ($number:ident, $arguments:expr) => {
+        ($operation:ident, $target:expr, $arguments:expr) => {
             let arguments: [u64; 6] = $arguments;
-            expect_call($number, arguments.as_ptr(), status)
+            expect_call($target, $operation, arguments.as_ptr(), status)
         };
     }
     // SAFETY: this executable links only the capture syscall, never a real
@@ -44,14 +44,15 @@ fn transport(status: HyperNativeStatus) {
     // dereference payload pointers. All pointer objects outlive each call.
     unsafe {
         expect!(
-            HYPER_NATIVE_SYS_FILESYSTEM_MOUNT_RAMFS,
-            [handle, bytes.as_ptr() as u64, bytes.len() as u64, 0, 0, 0]
+            HYPER_NATIVE_OP_FILESYSTEM_MOUNT_RAMFS,
+            handle,
+            [bytes.as_ptr() as u64, bytes.len() as u64, 0, 0, 0, 0]
         );
         result(
             sys::filesystem_mount_ramfs(handle, bytes.as_ptr(), bytes.len()),
             status,
         );
-        expect!(HYPER_NATIVE_SYS_FILE_PROTECT, [handle, 0, 0, 0, 0, 0]);
+        expect!(HYPER_NATIVE_OP_FILE_PROTECT, handle, [0, 0, 0, 0, 0, 0]);
         result(sys::file_protect(handle), status);
         let mapping = HyperNativePrivateMapping {
             source_offset: 0,
@@ -63,13 +64,14 @@ fn transport(status: HyperNativeStatus) {
             mode: 0,
         };
         expect!(
-            HYPER_NATIVE_SYS_VMAR_MAP_FILE,
+            HYPER_NATIVE_OP_VMAR_MAP_FILE,
+            handle,
             [
-                handle,
                 other,
                 offset,
                 &mapping as *const _ as u64,
                 core::mem::size_of_val(&mapping) as u64,
+                0,
                 0
             ]
         );
@@ -93,23 +95,27 @@ fn transport(status: HyperNativeStatus) {
             move_count: 0,
         };
         expect!(
-            HYPER_NATIVE_SYS_FILESYSTEM_SWITCH_ROOT,
-            [handle, &request as *const _ as u64, 0, 0, 0, 0]
+            HYPER_NATIVE_OP_FILESYSTEM_SWITCH_ROOT,
+            handle,
+            [&request as *const _ as u64, 0, 0, 0, 0, 0]
         );
         result(sys::filesystem_switch_root(handle, &request), status);
         expect!(
-            HYPER_NATIVE_SYS_FILESYSTEM_BEGIN_ROOT_SWITCH,
-            [handle, &request as *const _ as u64, 0, 0, 0, 0]
+            HYPER_NATIVE_OP_FILESYSTEM_BEGIN_ROOT_SWITCH,
+            handle,
+            [&request as *const _ as u64, 0, 0, 0, 0, 0]
         );
         result(sys::filesystem_begin_root_switch(handle, &request), status);
         expect!(
-            HYPER_NATIVE_SYS_FILESYSTEM_FINISH_ROOT_SWITCH,
-            [handle, 1, 0, 0, 0, 0]
+            HYPER_NATIVE_OP_FILESYSTEM_FINISH_ROOT_SWITCH,
+            handle,
+            [1, 0, 0, 0, 0, 0]
         );
         result(sys::filesystem_finish_root_switch(handle, true), status);
         expect!(
-            HYPER_NATIVE_SYS_VMAR_LOCK_MEMORY,
-            [handle, offset, deadline, options as u64, 0, 0]
+            HYPER_NATIVE_OP_VMAR_LOCK_MEMORY,
+            handle,
+            [offset, deadline, options as u64, 0, 0, 0]
         );
         assert_eq!(
             sys::vmar_lock_memory(handle, offset, deadline, options as u64),
@@ -117,8 +123,9 @@ fn transport(status: HyperNativeStatus) {
         );
         check_consumed();
         expect!(
-            HYPER_NATIVE_SYS_VMAR_UNLOCK_MEMORY,
-            [handle, 0, 0, HYPER_NATIVE_VMAR_MEMORY_CURRENT, 0, 0]
+            HYPER_NATIVE_OP_VMAR_UNLOCK_MEMORY,
+            handle,
+            [0, 0, HYPER_NATIVE_VMAR_MEMORY_CURRENT, 0, 0, 0]
         );
         assert_eq!(
             sys::vmar_unlock_memory(handle, 0, 0, HYPER_NATIVE_VMAR_MEMORY_CURRENT),
@@ -126,39 +133,51 @@ fn transport(status: HyperNativeStatus) {
         );
         check_consumed();
         expect!(
-            HYPER_NATIVE_SYS_PROCESS_BUILDER_SET_MEMORY_LOCK,
-            [handle, 1, 0, 0, 0, 0]
+            HYPER_NATIVE_OP_PROCESS_BUILDER_SET_MEMORY_LOCK,
+            handle,
+            [1, 0, 0, 0, 0, 0]
         );
         assert_eq!(sys::process_builder_set_memory_lock(handle, true), status);
         check_consumed();
         let affinity_words = [3_u64, 1_u64 << 63];
         expect!(
-            HYPER_NATIVE_SYS_VIRTUAL_CPU_SET_AFFINITY,
-            [handle, affinity_words.as_ptr().addr() as u64, 2, 0, 0, 0]
+            HYPER_NATIVE_OP_VIRTUAL_CPU_SET_AFFINITY,
+            handle,
+            [affinity_words.as_ptr().addr() as u64, 2, 0, 0, 0, 0]
         );
         assert_eq!(
             sys::virtual_cpu_set_affinity(handle, affinity_words.as_ptr(), 2),
             status
         );
         check_consumed();
-        expect!(HYPER_NATIVE_SYS_ABI_QUERY, [0; 6]);
+        expect!(
+            HYPER_NATIVE_OP_ABI_QUERY,
+            0xe000_0000_0000_0003,
+            [0, 0, 0, 0, 0, 0]
+        );
         result(sys::abi_query(), status);
-        expect!(HYPER_NATIVE_SYS_CLOCK_GET_MONOTONIC, [0; 6]);
+        expect!(
+            HYPER_NATIVE_OP_CLOCK_GET_MONOTONIC,
+            0xe000_0000_0000_0003,
+            [0, 0, 0, 0, 0, 0]
+        );
         result(sys::clock_get_monotonic(), status);
-        expect!(HYPER_NATIVE_SYS_HANDLE_CLOSE, [handle, 0, 0, 0, 0, 0]);
+        expect!(HYPER_NATIVE_OP_HANDLE_CLOSE, handle, [0, 0, 0, 0, 0, 0]);
         assert_eq!(sys::handle_close(handle), status);
         check_consumed();
         expect!(
-            HYPER_NATIVE_SYS_HANDLE_DUPLICATE,
-            [handle, other, 0, 0, 0, 0]
+            HYPER_NATIVE_OP_HANDLE_DUPLICATE,
+            handle,
+            [other, 0, 0, 0, 0, 0]
         );
         result(sys::handle_duplicate(handle, other), status);
         expect!(
-            HYPER_NATIVE_SYS_HANDLE_GET_INFO,
+            HYPER_NATIVE_OP_HANDLE_GET_INFO,
+            handle,
             [
-                handle,
                 info.as_mut_ptr() as u64,
                 size_of::<HyperNativeHandleInfo>() as u64,
+                0,
                 0,
                 0,
                 0
@@ -166,13 +185,15 @@ fn transport(status: HyperNativeStatus) {
         );
         result(sys::handle_get_info(handle, info.as_mut_ptr()), status);
         expect!(
-            HYPER_NATIVE_SYS_OBJECT_WAIT_ONE,
-            [handle, other, deadline, 0, 0, 0]
+            HYPER_NATIVE_OP_OBJECT_WAIT_ONE,
+            handle,
+            [other, deadline, 0, 0, 0, 0]
         );
         result(sys::object_wait_one(handle, other, deadline), status);
         expect!(
-            HYPER_NATIVE_SYS_BYTE_CHANNEL_WRITE,
-            [handle, 0, bytes.as_ptr() as u64, 17, 0, 0]
+            HYPER_NATIVE_OP_BYTE_CHANNEL_WRITE,
+            handle,
+            [0, bytes.as_ptr() as u64, 17, 0, 0, 0]
         );
         assert_eq!(
             sys::byte_channel_write(handle, bytes.as_ptr(), bytes.len()),
@@ -180,14 +201,15 @@ fn transport(status: HyperNativeStatus) {
         );
         check_consumed();
         expect!(
-            HYPER_NATIVE_SYS_CAPABILITY_CHANNEL_RECEIVE,
+            HYPER_NATIVE_OP_CAPABILITY_CHANNEL_RECEIVE,
+            handle,
             [
-                handle,
                 deadline,
                 bytes.as_mut_ptr() as u64,
                 17,
                 slots.as_mut_ptr() as u64,
-                2
+                2,
+                0
             ]
         );
         result(
@@ -202,22 +224,24 @@ fn transport(status: HyperNativeStatus) {
             status,
         );
         expect!(
-            HYPER_NATIVE_SYS_FILE_WRITE_AT,
-            [handle, options as u64, offset, bytes.as_ptr() as u64, 17, 0]
+            HYPER_NATIVE_OP_FILE_WRITE_AT,
+            handle,
+            [options as u64, offset, bytes.as_ptr() as u64, 17, 0, 0]
         );
         result(
             sys::file_write_at(handle, options, offset, bytes.as_ptr(), bytes.len()),
             status,
         );
         expect!(
-            HYPER_NATIVE_SYS_DIRECTORY_RENAME,
+            HYPER_NATIVE_OP_DIRECTORY_RENAME,
+            handle,
             [
-                handle,
                 bytes.as_ptr() as u64,
                 17,
                 other,
                 destination.as_ptr() as u64,
-                23
+                23,
+                0
             ]
         );
         result(
@@ -232,8 +256,9 @@ fn transport(status: HyperNativeStatus) {
             status,
         );
         expect!(
-            HYPER_NATIVE_SYS_VMAR_MAP,
-            [handle, other, offset, deadline, 4096, options as u64]
+            HYPER_NATIVE_OP_VMAR_MAP,
+            handle,
+            [other, offset, deadline, 4096, options as u64, 0]
         );
         assert_eq!(
             sys::vmar_map(handle, other, offset, deadline, 4096, options as u64),
@@ -241,7 +266,8 @@ fn transport(status: HyperNativeStatus) {
         );
         check_consumed();
         expect!(
-            HYPER_NATIVE_SYS_THREAD_CREATE,
+            HYPER_NATIVE_OP_THREAD_CREATE,
+            0xe000_0000_0000_0001,
             [handle, other, offset, deadline, 0, 0]
         );
         result(
@@ -250,7 +276,8 @@ fn transport(status: HyperNativeStatus) {
         );
         let affinity = [3_u64, 1_u64 << 63];
         expect!(
-            HYPER_NATIVE_SYS_THREAD_SET_CURRENT_NAME,
+            HYPER_NATIVE_OP_THREAD_SET_CURRENT_NAME,
+            0xe000_0000_0000_0001,
             [bytes.as_ptr() as u64, bytes.len() as u64, 0, 0, 0, 0]
         );
         assert_eq!(
@@ -259,7 +286,8 @@ fn transport(status: HyperNativeStatus) {
         );
         check_consumed();
         expect!(
-            HYPER_NATIVE_SYS_THREAD_CREATE,
+            HYPER_NATIVE_OP_THREAD_CREATE,
+            0xe000_0000_0000_0001,
             [handle, other, offset, deadline, affinity.as_ptr() as u64, 2]
         );
         result(
@@ -268,7 +296,8 @@ fn transport(status: HyperNativeStatus) {
         );
         let word = 1_u32;
         expect!(
-            HYPER_NATIVE_SYS_ATOMIC_WAIT,
+            HYPER_NATIVE_OP_ATOMIC_WAIT,
+            0xe000_0000_0000_0001,
             [
                 &word as *const u32 as u64,
                 options as u64,

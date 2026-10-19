@@ -19,9 +19,10 @@ typedef struct hyper_call_result {
 	uint64_t value1;
 } hyper_call_result_t;
 
-hyper_call_result_t hyper_native_call6(uint64_t number, uint64_t argument0, uint64_t argument1,
-				       uint64_t argument2, uint64_t argument3, uint64_t argument4,
-				       uint64_t argument5);
+hyper_call_result_t hyper_native_invoke6(hyper_native_handle_t target, uint64_t operation,
+					 uint64_t argument0, uint64_t argument1, uint64_t argument2,
+					 uint64_t argument3, uint64_t argument4,
+					 uint64_t argument5);
 
 hyper_call_result_t hyper_abi_query(void);
 /* Public scalar configuration; unknown keys return NOT_SUPPORTED. */
@@ -189,15 +190,23 @@ hyper_native_status_t hyper_process_request_stop(hyper_native_handle_t process);
 
 /* Supervisor-controlled retention. Views are revoked by explicit release,
  * controller loss or the configured deadline; no target page-in occurs. */
-hyper_call_result_t hyper_process_builder_retain(hyper_native_handle_t builder, uint64_t max_bytes, uint64_t timeout_ns);
+hyper_call_result_t hyper_process_builder_retain(hyper_native_handle_t builder, uint64_t max_bytes,
+						 uint64_t timeout_ns);
 hyper_call_result_t hyper_process_retirement_open_view(hyper_native_handle_t control);
 hyper_call_result_t hyper_process_retirement_release(hyper_native_handle_t control);
-hyper_call_result_t hyper_crash_view_read(hyper_native_handle_t view, uintptr_t address, void *output, size_t length);
-hyper_call_result_t hyper_process_retirement_get_info(hyper_native_handle_t object, hyper_native_process_retirement_info_t *output);
-hyper_call_result_t hyper_crash_view_get_info(hyper_native_handle_t object, hyper_native_process_retirement_info_t *output);
-hyper_call_result_t hyper_crash_view_thread(hyper_native_handle_t object, uint64_t index, hyper_native_crash_thread_t *output);
-hyper_call_result_t hyper_crash_view_mapping(hyper_native_handle_t object, uint64_t index, hyper_native_crash_mapping_t *output);
-hyper_call_result_t hyper_crash_view_handle(hyper_native_handle_t object, uint64_t index, hyper_native_crash_handle_t *output);
+hyper_call_result_t hyper_crash_view_read(hyper_native_handle_t view, uintptr_t address,
+					  void *output, size_t length);
+hyper_call_result_t
+hyper_process_retirement_get_info(hyper_native_handle_t object,
+				  hyper_native_process_retirement_info_t *output);
+hyper_call_result_t hyper_crash_view_get_info(hyper_native_handle_t object,
+					      hyper_native_process_retirement_info_t *output);
+hyper_call_result_t hyper_crash_view_thread(hyper_native_handle_t object, uint64_t index,
+					    hyper_native_crash_thread_t *output);
+hyper_call_result_t hyper_crash_view_mapping(hyper_native_handle_t object, uint64_t index,
+					     hyper_native_crash_mapping_t *output);
+hyper_call_result_t hyper_crash_view_handle(hyper_native_handle_t object, uint64_t index,
+					    hyper_native_crash_handle_t *output);
 
 hyper_call_result_t hyper_process_get_info(hyper_native_handle_t process,
 					   hyper_native_process_info_t *info);

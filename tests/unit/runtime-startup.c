@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <hyper/launch.h>
+#include <hyper/invocation.h>
 #include <hyper/heap.h>
 #include <hyper/stack.h>
 #include <hyper/system.h>
@@ -29,7 +30,10 @@ static const hyper_native_startup_handle_t *original_handles;
 
 static void check_original(const hyper_startup_t *startup)
 {
-	assert(startup->handles == original_handles && startup->handle_count == 3);
+	assert(startup->handles == original_handles && startup->handle_count == 6);
+	assert(hyper_native_execution_context() == 55);
+	assert(hyper_native_object_factory() == 66);
+	assert(hyper_native_system_info() == 77);
 	hyper_native_handle_t handle = 0;
 	assert(hyper_startup_find_handle(startup,
 					 HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_INITIAL_STACK_VMAR,
@@ -68,6 +72,7 @@ hyper_native_status_t hyper_runtime_capabilities_initialize(const hyper_startup_
 
 hyper_native_status_t hyper_page_size(size_t *page)
 {
+	assert(hyper_native_system_info() == 77);
 	*page = 4096;
 	return HYPER_NATIVE_STATUS_OK;
 }
@@ -152,6 +157,8 @@ static void entered(const uintptr_t *stack)
 int main(void)
 {
 	assert(hyper_runtime_startup() == NULL);
+	assert(hyper_native_execution_context() == 0 && hyper_native_object_factory() == 0 &&
+	       hyper_native_system_info() == 0);
 	assert(hyper_runtime_initialize(NULL) == HYPER_NATIVE_STATUS_INVALID_ARGUMENT);
 	assert(hyper_runtime_startup() == NULL && !heap_calls);
 	char argument[] = "/bin/example";
@@ -161,8 +168,23 @@ int main(void)
 		{HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_ROOT_VMAR, 0, 11},
 		{HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_INITIAL_STACK_VMAR, 0, 22},
 		{HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_CONSOLE, 0, 33},
+		{HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_EXECUTION_CONTEXT, 0, 55},
+		{HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_OBJECT_FACTORY, 0, 66},
+		{HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_SYSTEM_INFO, 0, 77},
 	};
 	original_handles = handles;
+	/* Admission is all-or-nothing: a missing or duplicate reserved role cannot
+	 * leave the runtime with only part of its authority initialized. */
+	hyper_startup_t incomplete = {.handles = handles, .handle_count = 5};
+	assert(hyper_native_initialize_invocation(&incomplete) == HYPER_NATIVE_STATUS_BAD_HANDLE);
+	assert(!hyper_native_execution_context() && !hyper_native_object_factory() &&
+	       !hyper_native_system_info());
+	hyper_native_startup_handle_t duplicate[] = {handles[3], handles[3], handles[4],
+						     handles[5]};
+	incomplete = (hyper_startup_t){.handles = duplicate, .handle_count = 4};
+	assert(hyper_native_initialize_invocation(&incomplete) == HYPER_NATIVE_STATUS_BAD_STATE);
+	assert(!hyper_native_execution_context() && !hyper_native_object_factory() &&
+	       !hyper_native_system_info());
 	uintptr_t words[] = {
 		2,
 		(uintptr_t)argument,
@@ -173,7 +195,7 @@ int main(void)
 		HYPER_AUXV_STARTUP_HANDLES,
 		(uintptr_t)handles,
 		HYPER_AUXV_STARTUP_HANDLE_COUNT,
-		3,
+		6,
 		HYPER_AUXV_INITIAL_STACK_BASE,
 		0xf1000000,
 		HYPER_AUXV_INITIAL_STACK_CAPACITY,
@@ -215,6 +237,12 @@ int main(void)
 	assert(view && view->handle_count == 2 && view->handles != handles);
 	assert(view->handles[0].purpose == handles[0].purpose && view->handles[0].handle == 11);
 	assert(view->handles[1].purpose == handles[2].purpose && view->handles[1].handle == 33);
+	assert(hyper_native_bind_invocation_handles(55, 66, 78) == HYPER_NATIVE_STATUS_BAD_STATE);
+	assert(hyper_native_bind_invocation_handles(55, 66, 77) == HYPER_NATIVE_STATUS_OK);
+	assert(hyper_native_bind_invocation_handles(55, 55, 77) ==
+	       HYPER_NATIVE_STATUS_INVALID_ARGUMENT);
+	assert(hyper_native_bind_invocation_handles(0, 66, 77) ==
+	       HYPER_NATIVE_STATUS_INVALID_ARGUMENT);
 	assert(view->argument_count == 2 && view->arguments[0] != argument &&
 	       memcmp(view->arguments[0], argument, sizeof(argument)) == 0 &&
 	       memcmp(view->arguments[1], option, sizeof(option)) == 0);
@@ -248,7 +276,7 @@ int main(void)
 	assert(memcmp(moved.arguments[0], "/bin/example", sizeof(argument)) == 0);
 	assert(memcmp(moved.arguments[1], "--help", sizeof(option)) == 0);
 	assert(memcmp(moved.environment[0], "TERM=hyper", sizeof(environment)) == 0);
-	assert(handles[1].handle == 22 && original_aux[1].value == 3);
+	assert(handles[1].handle == 22 && original_aux[1].value == 6);
 	hyper_native_handle_t output = 0;
 	assert(hyper_startup_find_handle(view,
 					 HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_INITIAL_STACK_VMAR,

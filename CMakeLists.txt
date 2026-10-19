@@ -28,6 +28,7 @@ endif()
 set(HYPER_RUNTIME_SOURCES
     src/arch/${HYPER_ARCH}/syscall.S
     src/system.c
+    src/invocation.c
     src/runtime.c
     src/bootstrap.c
     src/launch.c
@@ -70,7 +71,9 @@ target_include_directories(hyper_crt PRIVATE
 
 target_compile_features(hyper PRIVATE c_std_17)
 target_compile_options(hyper PRIVATE
-    $<$<COMPILE_LANGUAGE:C>:-ffreestanding;-fno-builtin;-fPIC;-fvisibility=hidden;-Wall;-Wextra;-Werror>
+    # Stateless loaders reference only explicit-handle operations. Discard the
+    # unreferenced ambient wrappers and their runtime-owned capability storage.
+    $<$<COMPILE_LANGUAGE:C>:-ffreestanding;-fno-builtin;-fPIC;-ffunction-sections;-fdata-sections;-fvisibility=hidden;-Wall;-Wextra;-Werror>
 )
 target_compile_features(hyper_shared_objects PRIVATE c_std_17)
 target_compile_options(hyper_shared_objects PRIVATE

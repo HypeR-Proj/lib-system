@@ -112,7 +112,7 @@ target_include_directories(hyper-stack-test PRIVATE ../../include ${HYPER_ABI_IN
 target_link_libraries(hyper-stack-test PRIVATE Threads::Threads)
 add_test(NAME userspace-stacks COMMAND hyper-stack-test)
 
-add_executable(hyper-runtime-startup-test ../../src/bootstrap.c ../../src/runtime.c ../../src/startup.c runtime-startup.c)
+add_executable(hyper-runtime-startup-test ../../src/bootstrap.c ../../src/runtime.c ../../src/startup.c ../../src/invocation.c runtime-startup.c)
 target_compile_features(hyper-runtime-startup-test PRIVATE c_std_17)
 target_compile_options(hyper-runtime-startup-test PRIVATE -Wall -Wextra -Werror -UNDEBUG)
 target_include_directories(hyper-runtime-startup-test PRIVATE ../../include ${HYPER_ABI_INCLUDE_DIR})
