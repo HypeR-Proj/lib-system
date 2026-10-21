@@ -3,6 +3,7 @@
  */
 #include <hyper/thread.h>
 #include "stack-internal.h"
+#include "heap-internal.h"
 #include <hyper/heap.h>
 #include <hyper/syscall.h>
 #include <stdatomic.h>
@@ -25,7 +26,10 @@ typedef struct tls_value {
 typedef struct thread_state {
 	tls_value_t *values;
 	hyper_stack_t *stack;
+	unsigned heap_arena;
 } thread_state_t;
+
+static atomic_uint next_heap_arena;
 
 #ifdef HYPER_THREAD_HOST_TEST
 static _Thread_local thread_state_t *host_thread;
@@ -74,8 +78,16 @@ hyper_native_status_t hyper_runtime_thread_attach(void)
 	thread_state_t *state = calloc(1, sizeof(*state));
 	if (state == NULL)
 		return HYPER_NATIVE_STATUS_NO_MEMORY;
+	state->heap_arena = atomic_fetch_add_explicit(&next_heap_arena, 1, memory_order_relaxed) %
+			    HYPER_HEAP_ARENAS;
 	install(state);
 	return HYPER_NATIVE_STATUS_OK;
+}
+
+unsigned hyper_heap_arena_index(void)
+{
+	thread_state_t *state = current();
+	return state ? state->heap_arena : 0;
 }
 
 hyper_stack_t *hyper_stack_current(void)
@@ -171,6 +183,7 @@ void hyper_runtime_thread_detach(void)
 	}
 	install(NULL);
 	free(state);
+	hyper_heap_trim();
 }
 
 int hyper_runtime_wait_u32(const uint32_t *address, uint32_t expected, uint64_t deadline)

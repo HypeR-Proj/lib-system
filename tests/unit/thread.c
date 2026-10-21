@@ -10,6 +10,12 @@
 #include <stdlib.h>
 #include <time.h>
 
+/* Thread teardown invokes the allocator's explicit idle-cache release. */
+size_t hyper_heap_trim(void)
+{
+	return 0;
+}
+
 static uintptr_t key;
 static atomic_uint destructors;
 static atomic_uint round;

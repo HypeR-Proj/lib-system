@@ -30,6 +30,12 @@ void *hyper_alloc(size_t size, size_t alignment);
 void hyper_free(void *pointer);
 void *hyper_realloc(void *pointer, size_t size, size_t alignment);
 
+/* Return currently empty cached regions. At most eight 64 KiB regions are
+ * retained per process between calls. Large empty regions return immediately.
+ * Thread detach and allocation failure also trim; services can call this at
+ * idle/pressure boundaries. Concurrent live allocations remain unaffected. */
+size_t hyper_heap_trim(void);
+
 #ifdef __cplusplus
 }
 #endif

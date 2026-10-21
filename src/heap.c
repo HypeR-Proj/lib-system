@@ -7,18 +7,22 @@
 #include <hyper/system.h>
 #include <stdatomic.h>
 #include "mutex-internal.h"
+#include "heap-internal.h"
 #include <stdbool.h>
 #include <string.h>
 
-/* One process heap. Region/block metadata lives in the mappings it describes;
- * allocator bookkeeping never allocates recursively. All topology is locked.
- * First-fit blocks split and coalesce; wholly free regions are unmapped. */
+/* Each attached thread chooses a bounded arena. Blocks use size-class free
+ * lists under the owning arena lock; only region map/unmap uses heap_lock.
+ * Cross-thread frees return to the allocation's arena. Lock order is always
+ * arena -> heap_lock. Metadata stays in the mappings and never recurses. */
 #define BLOCK_ALIGNMENT _Alignof(max_align_t)
 #define REGION_GRANULE ((size_t)65536)
 static size_t page_size;
 
 typedef struct region region_t;
 typedef struct block block_t;
+typedef struct arena arena_t;
+#define BIN_COUNT (sizeof(size_t) * 8)
 
 struct block {
 	size_t span;
@@ -27,13 +31,25 @@ struct block {
 	block_t *next;
 	region_t *region;
 	bool available;
+	block_t *free_previous, *free_next;
 };
 
 struct region {
+	arena_t *arena;
 	size_t size;
 	hyper_native_handle_t vmar;
 	region_t *next;
 };
+
+struct arena {
+	/* Keep a neighbor's frequently updated spare pointer off this lock line. */
+	_Alignas(64) hyper_mutex_t lock;
+	block_t *bins[BIN_COUNT];
+	region_t *spare;
+};
+
+static arena_t arenas[HYPER_HEAP_ARENAS];
+static atomic_bool heap_ready;
 
 static hyper_mutex_t heap_lock;
 static hyper_native_handle_t heap_vmar, root_vmar;
@@ -110,6 +126,7 @@ hyper_native_status_t hyper_heap_initialize(const hyper_startup_t *startup)
 		root_vmar = root_owner.value0;
 		heap_vmar = result.value0;
 		heap_base = result.value1;
+		atomic_store_explicit(&heap_ready, true, memory_order_release);
 	} else {
 		require_success(hyper_handle_close(root_owner.value0));
 	}
@@ -117,7 +134,7 @@ hyper_native_status_t hyper_heap_initialize(const hyper_startup_t *startup)
 	return result.status;
 }
 
-static region_t *grow(size_t minimum)
+static region_t *grow(arena_t *arena, size_t minimum)
 {
 	size_t size;
 	if (!round_up(minimum, page_size, &size)) {
@@ -165,7 +182,7 @@ static region_t *grow(size_t minimum)
 	while (*link && (uintptr_t)*link < address)
 		link = &(*link)->next;
 	region_t *region = (region_t *)address;
-	*region = (region_t){.size = size, .vmar = vmar, .next = *link};
+	*region = (region_t){.arena = arena, .size = size, .vmar = vmar, .next = *link};
 	*link = region;
 	block_t *block = first_block(region);
 	*block = (block_t){
@@ -174,6 +191,39 @@ static region_t *grow(size_t minimum)
 		.available = true,
 	};
 	return region;
+}
+
+/* Floor-log classes skip allocated blocks and smaller free spans. Alignment
+ * may require walking a few candidates within a class; take checks the exact
+ * padded extent, so unusually aligned allocations retain their full contract. */
+static size_t bin_for(size_t span)
+{
+	/* Every admitted block/request includes a nonempty metadata prefix. */
+	return sizeof(unsigned long long) * 8 - 1 -
+	       (size_t)__builtin_clzll((unsigned long long)span);
+}
+
+static void insert_free(block_t *block)
+{
+	arena_t *arena = block->region->arena;
+	size_t bin = bin_for(block->span);
+	block->free_previous = NULL;
+	block->free_next = arena->bins[bin];
+	if (block->free_next)
+		block->free_next->free_previous = block;
+	arena->bins[bin] = block;
+}
+
+static void remove_free(block_t *block)
+{
+	arena_t *arena = block->region->arena;
+	if (block->free_previous)
+		block->free_previous->free_next = block->free_next;
+	else
+		arena->bins[bin_for(block->span)] = block->free_next;
+	if (block->free_next)
+		block->free_next->free_previous = block->free_previous;
+	block->free_previous = block->free_next = NULL;
 }
 
 static void split(block_t *block, size_t used)
@@ -195,6 +245,7 @@ static void split(block_t *block, size_t used)
 	}
 	block->next = tail;
 	block->span = used;
+	insert_free(tail);
 }
 
 static void *take(block_t *block, size_t size, size_t alignment)
@@ -208,6 +259,9 @@ static void *take(block_t *block, size_t size, size_t alignment)
 	    used > block->span) {
 		return NULL;
 	}
+	remove_free(block);
+	if (block->region->arena->spare == block->region)
+		block->region->arena->spare = NULL;
 	split(block, used);
 	block->available = false;
 	block->requested = size;
@@ -233,24 +287,37 @@ void *hyper_alloc(size_t size, size_t alignment)
 	if (alignment > SIZE_MAX - overhead || size > SIZE_MAX - alignment - overhead) {
 		return NULL;
 	}
-	hyper_mutex_lock(&heap_lock);
-	if (heap_vmar == 0) {
-		hyper_mutex_unlock(&heap_lock);
+	if (!atomic_load_explicit(&heap_ready, memory_order_acquire))
 		return NULL;
-	}
-	for (region_t *region = regions; region != NULL; region = region->next) {
-		for (block_t *block = first_block(region); block != NULL; block = block->next) {
-			void *pointer = take(block, size, alignment);
-			if (pointer != NULL) {
-				hyper_mutex_unlock(&heap_lock);
-				return pointer;
+	arena_t *arena = &arenas[hyper_heap_arena_index() % HYPER_HEAP_ARENAS];
+	size_t minimum = sizeof(block_t) + sizeof(block_t *) + size;
+	/* Retry after releasing cached empty regions if resource admission fails. */
+	for (unsigned attempt = 0; attempt < 2; ++attempt) {
+		hyper_mutex_lock(&arena->lock);
+		for (size_t bin = bin_for(minimum); bin < BIN_COUNT; ++bin) {
+			for (block_t *block = arena->bins[bin]; block; block = block->free_next) {
+				void *pointer = take(block, size, alignment);
+				if (pointer) {
+					hyper_mutex_unlock(&arena->lock);
+					return pointer;
+				}
 			}
 		}
+		hyper_mutex_lock(&heap_lock);
+		region_t *region = grow(arena, size + alignment + overhead);
+		hyper_mutex_unlock(&heap_lock);
+		void *pointer = NULL;
+		if (region) {
+			insert_free(first_block(region));
+			pointer = take(first_block(region), size, alignment);
+		}
+		hyper_mutex_unlock(&arena->lock);
+		if (pointer)
+			return pointer;
+		if (attempt == 0)
+			hyper_heap_trim();
 	}
-	region_t *region = grow(size + alignment + overhead);
-	void *pointer = region == NULL ? NULL : take(first_block(region), size, alignment);
-	hyper_mutex_unlock(&heap_lock);
-	return pointer;
+	return NULL;
 }
 
 static void merge_next(block_t *block)
@@ -263,35 +330,68 @@ static void merge_next(block_t *block)
 	}
 }
 
+/* Requires its arena lock. No allocation in this region remains reachable. */
+static size_t release_region(region_t *region)
+{
+	arena_t *arena = region->arena;
+	remove_free(first_block(region));
+	if (arena->spare == region)
+		arena->spare = NULL;
+	hyper_mutex_lock(&heap_lock);
+	region_t **link = &regions;
+	while (*link != region)
+		link = &(*link)->next;
+	const size_t size = region->size;
+	const hyper_native_handle_t vmar = region->vmar;
+	*link = region->next;
+	require_success(hyper_vmar_unmap(vmar, (uintptr_t)region, size));
+	if (vmar != heap_vmar)
+		require_success(hyper_vmar_destroy(vmar));
+	hyper_mutex_unlock(&heap_lock);
+	return size;
+}
+
 void hyper_free(void *pointer)
 {
-	if (pointer == NULL) {
+	if (!pointer)
 		return;
-	}
-	hyper_mutex_lock(&heap_lock);
+	/* The caller's live allocation retains its region until we take its lock. */
 	block_t *block = ((block_t **)pointer)[-1];
+	arena_t *arena = block->region->arena;
+	hyper_mutex_lock(&arena->lock);
 	block->available = true;
-	if (block->next != NULL && block->next->available) {
+	if (block->next && block->next->available) {
+		remove_free(block->next);
 		merge_next(block);
 	}
-	if (block->previous != NULL && block->previous->available) {
+	if (block->previous && block->previous->available) {
 		block = block->previous;
+		remove_free(block);
 		merge_next(block);
 	}
-	if (block->previous == NULL && block->next == NULL) {
+	insert_free(block);
+	if (!block->previous && !block->next) {
 		region_t *region = block->region;
-		region_t **link = &regions;
-		while (*link != region) {
-			link = &(*link)->next;
-		}
-		const size_t size = region->size;
-		const hyper_native_handle_t vmar = region->vmar;
-		*link = region->next;
-		require_success(hyper_vmar_unmap(vmar, (uintptr_t)region, size));
-		if (vmar != heap_vmar)
-			require_success(hyper_vmar_destroy(vmar));
+		/* At most one ordinary region per arena is retained. Large mappings
+		 * and extra reservations are returned immediately. */
+		if (!arena->spare && region->vmar == heap_vmar && region->size == REGION_GRANULE)
+			arena->spare = region;
+		else
+			release_region(region);
 	}
-	hyper_mutex_unlock(&heap_lock);
+	hyper_mutex_unlock(&arena->lock);
+}
+
+size_t hyper_heap_trim(void)
+{
+	size_t released = 0;
+	for (size_t i = 0; i < HYPER_HEAP_ARENAS; ++i) {
+		hyper_mutex_lock(&arenas[i].lock);
+		if (arenas[i].spare)
+			released += release_region(arenas[i].spare);
+		hyper_mutex_unlock(&arenas[i].lock);
+	}
+	return released;
 }
 
 void *hyper_realloc(void *pointer, size_t size, size_t alignment)

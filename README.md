@@ -48,10 +48,24 @@ Reservation allocates no backing pages. Allocations map read/write, non-executab
 VMOs in regions of at least 64 KiB. If the first reservation cannot fit a region,
 an independent VMAR is requested with a hint immediately above the first one.
 No recursive malloc is needed: metadata lives in the mapped region itself.
-First-fit blocks split and coalesce. Fully free regions release their backing;
-overflow regions also destroy their VMAR. The initial reservation remains for
-reuse. Allocation is subject to address-space and process resource limits.
-A private mutex serializes metadata, blocking rather than spinning on contention.
+Blocks split and coalesce within one of eight process-local arenas. Attached
+threads select an arena round-robin; unattached startup code uses arena zero.
+Each arena has a sleeping mutex and size-class free lists. Cross-thread frees
+return to the allocation's arena; only region mapping/unmapping shares a global
+mutex. More than eight threads share arenas, so contention remains possible.
+This does not change the thread scheduler or CPU affinity.
+
+At most one wholly free 64 KiB ordinary region is retained per arena (512 KiB
+per process total). Larger and overflow regions return their backing immediately;
+overflow VMARs are destroyed too. The initial address reservation remains for
+reuse. `hyper_heap_trim()` releases these empty retained regions and returns the
+number of bytes unmapped; it never moves or frees live allocations. Thread detach
+and an allocation failure call trim automatically. An allocation retries once
+after trimming. Applications may trim at an idle boundary; there is no automatic
+kernel-pressure notification into an otherwise idle process. Partially occupied
+regions remain allocated until their live blocks are freed. All retained memory
+continues to count against that process's resource limits.
+
 This is a general-purpose initial allocator, not a constant-time or real-time
 allocation contract. It is not reentrant from asynchronous handlers.
 

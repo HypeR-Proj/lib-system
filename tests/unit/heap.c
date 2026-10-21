@@ -10,6 +10,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <stdatomic.h>
+
+static atomic_uint next_arena;
+static _Thread_local unsigned arena_plus_one;
+
+unsigned hyper_heap_arena_index(void)
+{
+	if (!arena_plus_one)
+		arena_plus_one = 1 + atomic_fetch_add(&next_arena, 1) % 8;
+	return arena_plus_one - 1;
+}
 
 hyper_call_result_t hyper_system_config(uint64_t key)
 {
@@ -173,6 +184,34 @@ static void *worker(void *argument)
 	return NULL;
 }
 
+/* A live allocation may be handed to any thread, while unrelated arenas
+ * release their empty regions concurrently. */
+struct transfer {
+	unsigned char *bytes[64];
+};
+
+static void *release_transferred(void *argument)
+{
+	struct transfer *transfer = argument;
+	for (size_t i = 0; i < 64; ++i) {
+		for (size_t j = 0; j < 257; ++j)
+			assert(transfer->bytes[i][j] == (unsigned char)i);
+		hyper_free(transfer->bytes[i]);
+		hyper_heap_trim();
+	}
+	return NULL;
+}
+
+static void *trimmer(void *argument)
+{
+	(void)argument;
+	for (size_t i = 0; i < 500; ++i) {
+		hyper_heap_trim();
+		sched_yield();
+	}
+	return NULL;
+}
+
 int main(void)
 {
 	void *reservation = mmap(NULL, HYPER_HEAP_SIZE + 16384, PROT_READ | PROT_WRITE,
@@ -191,6 +230,7 @@ int main(void)
 	fail_reserve = 0;
 	assert(hyper_heap_initialize(&startup) == HYPER_NATIVE_STATUS_OK);
 	assert(hyper_heap_initialize(&startup) == HYPER_NATIVE_STATUS_OK);
+	hyper_heap_trim();
 	assert(mapped_bytes == 0);
 	assert(hyper_alloc(SIZE_MAX, 16) == NULL);
 	assert(hyper_alloc(16, 0) == NULL);
@@ -218,6 +258,7 @@ int main(void)
 		assert(p != NULL && (uintptr_t)p % alignment == 0);
 		memset(p, 0xab, 123);
 		hyper_free(p);
+		hyper_heap_trim();
 		assert(mapped_bytes == 0);
 	}
 	/* Keep a neighbor alive so free/reuse and coalescing happen inside a region. */
@@ -233,6 +274,7 @@ int main(void)
 	assert(merged == a && maps == before);
 	free(merged);
 	free(c);
+	hyper_heap_trim();
 	assert(mapped_bytes == 0);
 	unsigned char *p = malloc(32);
 	assert(p != NULL);
@@ -243,7 +285,7 @@ int main(void)
 	fail_map = 1;
 	size_t old_closes = closes;
 	assert(realloc(p, 100000) == NULL);
-	assert(closes == old_closes + 1 && !backing_live);
+	assert(closes == old_closes + 2 && !backing_live);
 	fail_map = 0;
 	for (size_t i = 0; i < 32; ++i) {
 		assert(p[i] == 0x5a);
@@ -259,15 +301,35 @@ int main(void)
 		assert(shrunk[i] == 0x5a);
 	}
 	assert(realloc(shrunk, 0) == NULL);
+	hyper_heap_trim();
 	assert(mapped_bytes == 0);
 	void *large = hyper_alloc(HYPER_HEAP_SIZE + 1, 16);
 	assert(large && extra_size);
 	hyper_free(large);
+	hyper_heap_trim();
 	assert(!extra_size && !mapped_bytes);
 	fail_map = 1;
 	assert(!hyper_alloc(HYPER_HEAP_SIZE + 1, 16));
 	fail_map = 0;
 	assert(!extra_size && !backing_live);
+	/* Empty ordinary regions are reused, but explicit trim returns them all. */
+	size_t maps_before = maps;
+	for (size_t i = 0; i < 2000; ++i) {
+		void *small = hyper_alloc(64, 16);
+		assert(small);
+		hyper_free(small);
+	}
+	assert(maps == maps_before + 1 && mapped_bytes == 65536);
+	assert(hyper_heap_trim() == 65536 && mapped_bytes == 0);
+	struct transfer transfer;
+	for (size_t i = 0; i < 64; ++i) {
+		transfer.bytes[i] = hyper_alloc(257, 16);
+		assert(transfer.bytes[i]);
+		memset(transfer.bytes[i], (int)i, 257);
+	}
+	pthread_t freeing, trimming;
+	assert(pthread_create(&freeing, NULL, release_transferred, &transfer) == 0);
+	assert(pthread_create(&trimming, NULL, trimmer, NULL) == 0);
 	pthread_t workers[4];
 	for (uintptr_t i = 0; i < 4; ++i) {
 		assert(pthread_create(&workers[i], NULL, worker, (void *)(i + 1)) == 0);
@@ -275,7 +337,11 @@ int main(void)
 	for (size_t i = 0; i < 4; ++i) {
 		assert(pthread_join(workers[i], NULL) == 0);
 	}
-	assert(mapped_bytes == 0 && !backing_live);
+	assert(pthread_join(freeing, NULL) == 0);
+	assert(pthread_join(trimming, NULL) == 0);
+	assert(mapped_bytes <= 8 * 65536 && !backing_live);
+	hyper_heap_trim();
+	assert(mapped_bytes == 0);
 	assert(munmap(reservation, HYPER_HEAP_SIZE + 16384) == 0);
 	return 0;
 }
