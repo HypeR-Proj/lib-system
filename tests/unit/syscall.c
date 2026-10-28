@@ -45,6 +45,8 @@ static void transport(hyper_native_status_t status)
 	RESULT(hyper_directory_begin_read(handle));
 	EXPECT(FILE_PROTECT, handle, 0, 0, 0, 0, 0, 0);
 	RESULT(hyper_file_protect(handle));
+	EXPECT(FILE_PREFETCH, handle, offset, 65536, 0, 0, 0, 0);
+	RESULT(hyper_file_prefetch(handle, offset, 65536));
 	hyper_native_private_mapping_t mapping = {0};
 	EXPECT(VMAR_MAP_FILE, handle, other, loader, (uintptr_t)&mapping, sizeof(mapping), 0, 0);
 	STATUS(hyper_vmar_map_file(handle, other, loader, &mapping, sizeof(mapping)));

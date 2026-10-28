@@ -137,6 +137,10 @@ hyper_call_result_t hyper_vmo_create(uint64_t size);
  * references until unmap or process teardown. This operation retains no pages.
  */
 hyper_call_result_t hyper_file_protect(hyper_native_handle_t file);
+/* Synchronous, optional clean-cache fill; no residency guarantee or user copy.
+ * Length is bounded by HYPER_NATIVE_FILE_MAX_PREFETCH_BYTES. */
+hyper_call_result_t hyper_file_prefetch(hyper_native_handle_t file, uint64_t offset,
+					uint64_t length);
 /** Privately map protected File bytes into the caller's own VMAR.
  * Requires File READ (also EXECUTE for executable mappings), MAP on both VMAR
  * and a matching protection token, and COPY_ON_WRITE mode in the request.

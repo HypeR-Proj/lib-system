@@ -178,6 +178,13 @@ hyper_call_result_t hyper_file_get_info(hyper_native_handle_t file, hyper_native
 				    sizeof(*info), 0, 0, 0, 0);
 }
 
+hyper_call_result_t hyper_file_prefetch(hyper_native_handle_t file, uint64_t offset,
+					uint64_t length)
+{
+	return hyper_native_invoke6(file, HYPER_NATIVE_OP_FILE_PREFETCH, offset, length, 0, 0, 0,
+				    0);
+}
+
 hyper_call_result_t hyper_vmo_create_snapshot(hyper_native_handle_t vmo)
 {
 	return hyper_native_invoke6(vmo, HYPER_NATIVE_OP_VMO_CREATE_SNAPSHOT, 0, 0, 0, 0, 0, 0);

@@ -54,6 +54,8 @@ fn transport(status: HyperNativeStatus) {
         );
         expect!(HYPER_NATIVE_OP_FILE_PROTECT, handle, [0, 0, 0, 0, 0, 0]);
         result(sys::file_protect(handle), status);
+        expect!(HYPER_NATIVE_OP_FILE_PREFETCH, handle, [offset, 65536, 0, 0, 0, 0]);
+        result(sys::file_prefetch(handle, offset, 65536), status);
         let mapping = HyperNativePrivateMapping {
             source_offset: 0,
             source_length: 0,
