@@ -86,8 +86,25 @@
   "packages": [],
   "tests": [
     [
-      "make",
-      "sdk-test"
+      "cmake",
+      "-S",
+      "stdlib/hyper/tests/unit",
+      "-B",
+      "target/module-lib",
+      "-DCMAKE_C_COMPILER=clang",
+      "-DHYPER_ABI_INCLUDE_DIR={system}/sdk/abi/include"
+    ],
+    [
+      "cmake",
+      "--build",
+      "target/module-lib"
+    ],
+    [
+      "ctest",
+      "--test-dir",
+      "target/module-lib",
+      "--output-on-failure"
     ]
-  ]
+  ],
+  "cargo_context": {}
 }
