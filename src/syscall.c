@@ -41,17 +41,18 @@ hyper_call_result_t hyper_handle_replace(hyper_native_handle_t source, uint64_t 
 }
 
 hyper_call_result_t hyper_handle_get_info(hyper_native_handle_t handle,
-					  hyper_native_handle_info_t *info)
+					  hyper_native_handle_info_t *info, size_t record_size)
 {
 	return hyper_native_invoke6(handle, HYPER_NATIVE_OP_HANDLE_GET_INFO, (uintptr_t)info,
-				    sizeof(*info), 0, 0, 0, 0);
+				    record_size, 0, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_object_get_basic_info(hyper_native_handle_t handle,
-						hyper_native_object_basic_info_t *info)
+						hyper_native_object_basic_info_t *info,
+						size_t record_size)
 {
 	return hyper_native_invoke6(handle, HYPER_NATIVE_OP_OBJECT_GET_BASIC_INFO, (uintptr_t)info,
-				    sizeof(*info), 0, 0, 0, 0);
+				    record_size, 0, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_object_wait_one(hyper_native_handle_t object, uint64_t signals,
@@ -152,17 +153,19 @@ hyper_call_result_t hyper_directory_begin_read(hyper_native_handle_t directory)
 }
 
 hyper_call_result_t hyper_directory_read(hyper_native_handle_t stream, uint64_t cookie,
-					 hyper_native_directory_entry_t *records, size_t capacity)
+					 hyper_native_directory_entry_t *records, size_t capacity,
+					 size_t record_size)
 {
 	return hyper_native_invoke6(stream, HYPER_NATIVE_OP_DIRECTORY_READ, cookie,
-				    (uintptr_t)records, capacity, 0, 0, 0);
+				    (uintptr_t)records, capacity, 0, record_size, 0);
 }
 
 hyper_call_result_t hyper_directory_get_info(hyper_native_handle_t directory,
-					     hyper_native_directory_info_t *info)
+					     hyper_native_directory_info_t *info,
+					     size_t record_size)
 {
 	return hyper_native_invoke6(directory, HYPER_NATIVE_OP_DIRECTORY_GET_INFO, (uintptr_t)info,
-				    sizeof(*info), 0, 0, 0, 0);
+				    record_size, 0, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_file_read_at(hyper_native_handle_t file, uint64_t offset, void *output,
@@ -172,10 +175,11 @@ hyper_call_result_t hyper_file_read_at(hyper_native_handle_t file, uint64_t offs
 				    (uintptr_t)output, output_capacity, 0, 0);
 }
 
-hyper_call_result_t hyper_file_get_info(hyper_native_handle_t file, hyper_native_file_info_t *info)
+hyper_call_result_t hyper_file_get_info(hyper_native_handle_t file, hyper_native_file_info_t *info,
+					size_t record_size)
 {
 	return hyper_native_invoke6(file, HYPER_NATIVE_OP_FILE_GET_INFO, (uintptr_t)info,
-				    sizeof(*info), 0, 0, 0, 0);
+				    record_size, 0, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_file_prefetch(hyper_native_handle_t file, uint64_t offset,
@@ -268,10 +272,11 @@ hyper_call_result_t hyper_process_builder_create(hyper_native_handle_t factory,
 }
 
 hyper_call_result_t hyper_resource_domain_create(hyper_native_handle_t parent,
-						 const hyper_native_resource_limits_t *limits)
+						 const hyper_native_resource_limits_t *limits,
+						 size_t record_size)
 {
 	return hyper_native_invoke6(parent, HYPER_NATIVE_OP_RESOURCE_DOMAIN_CREATE,
-				    (uint64_t)(uintptr_t)limits, sizeof(*limits), 0, 0, 0, 0);
+				    (uint64_t)(uintptr_t)limits, record_size, 0, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_task_group_create(hyper_native_handle_t factory,
@@ -292,10 +297,11 @@ hyper_virtual_machine_creation_lease_create(hyper_native_handle_t authority,
 
 hyper_call_result_t
 hyper_virtual_machine_create(hyper_native_handle_t lease,
-			     const hyper_native_virtual_machine_configuration_t *configuration)
+			     const hyper_native_virtual_machine_configuration_t *configuration,
+			     size_t record_size)
 {
 	return hyper_native_invoke6(lease, HYPER_NATIVE_OP_VIRTUAL_MACHINE_CREATE,
-				    (uintptr_t)configuration, sizeof(*configuration), 0, 0, 0, 0);
+				    (uintptr_t)configuration, record_size, 0, 0, 0, 0);
 }
 
 hyper_native_status_t hyper_pending_virtual_machine_set_memory(hyper_native_handle_t pending,
@@ -339,10 +345,11 @@ hyper_call_result_t hyper_virtual_serial_write(hyper_native_handle_t virtual_ser
 
 hyper_native_status_t
 hyper_pending_virtual_machine_set_bootstrap(hyper_native_handle_t pending,
-					    const hyper_native_virtual_cpu_bootstrap_t *bootstrap)
+					    const hyper_native_virtual_cpu_bootstrap_t *bootstrap,
+					    size_t record_size)
 {
 	return hyper_native_invoke6(pending, HYPER_NATIVE_OP_PENDING_VIRTUAL_MACHINE_SET_BOOTSTRAP,
-				    (uintptr_t)bootstrap, sizeof(*bootstrap), 0, 0, 0, 0)
+				    (uintptr_t)bootstrap, record_size, 0, 0, 0, 0)
 		.status;
 }
 
@@ -389,17 +396,19 @@ hyper_native_status_t hyper_virtual_machine_request_stop(hyper_native_handle_t m
 }
 
 hyper_call_result_t hyper_virtual_machine_get_info(hyper_native_handle_t machine,
-						   hyper_native_virtual_machine_info_t *info)
+						   hyper_native_virtual_machine_info_t *info,
+						   size_t record_size)
 {
 	return hyper_native_invoke6(machine, HYPER_NATIVE_OP_VIRTUAL_MACHINE_GET_INFO,
-				    (uintptr_t)info, sizeof(*info), 0, 0, 0, 0);
+				    (uintptr_t)info, record_size, 0, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_virtual_cpu_get_info(hyper_native_handle_t vcpu,
-					       hyper_native_virtual_cpu_info_t *info)
+					       hyper_native_virtual_cpu_info_t *info,
+					       size_t record_size)
 {
 	return hyper_native_invoke6(vcpu, HYPER_NATIVE_OP_VIRTUAL_CPU_GET_INFO, (uintptr_t)info,
-				    sizeof(*info), 0, 0, 0, 0);
+				    record_size, 0, 0, 0, 0);
 }
 
 hyper_native_status_t hyper_process_builder_set_name(hyper_native_handle_t builder,
@@ -517,104 +526,111 @@ hyper_call_result_t hyper_crash_view_read(hyper_native_handle_t view, uintptr_t 
 
 hyper_call_result_t
 hyper_process_retirement_get_info(hyper_native_handle_t object,
-				  hyper_native_process_retirement_info_t *output)
+				  hyper_native_process_retirement_info_t *output,
+				  size_t record_size)
 {
 	return hyper_native_invoke6(object, HYPER_NATIVE_OP_PROCESS_RETIREMENT_GET_INFO,
-				    (uintptr_t)output, sizeof(*output), 0, 0, 0, 0);
+				    (uintptr_t)output, record_size, 0, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_crash_view_get_info(hyper_native_handle_t object,
-					      hyper_native_process_retirement_info_t *output)
+					      hyper_native_process_retirement_info_t *output,
+					      size_t record_size)
 {
 	return hyper_native_invoke6(object, HYPER_NATIVE_OP_CRASH_VIEW_GET_INFO, (uintptr_t)output,
-				    sizeof(*output), 0, 0, 0, 0);
+				    record_size, 0, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_crash_view_thread(hyper_native_handle_t object, uint64_t index,
-					    hyper_native_crash_thread_t *output)
+					    hyper_native_crash_thread_t *output, size_t record_size)
 {
 	return hyper_native_invoke6(object, HYPER_NATIVE_OP_CRASH_VIEW_THREAD, index,
-				    (uintptr_t)output, sizeof(*output), 0, 0, 0);
+				    (uintptr_t)output, record_size, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_crash_view_mapping(hyper_native_handle_t object, uint64_t index,
-					     hyper_native_crash_mapping_t *output)
+					     hyper_native_crash_mapping_t *output,
+					     size_t record_size)
 {
 	return hyper_native_invoke6(object, HYPER_NATIVE_OP_CRASH_VIEW_MAPPING, index,
-				    (uintptr_t)output, sizeof(*output), 0, 0, 0);
+				    (uintptr_t)output, record_size, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_crash_view_handle(hyper_native_handle_t object, uint64_t index,
-					    hyper_native_crash_handle_t *output)
+					    hyper_native_crash_handle_t *output, size_t record_size)
 {
 	return hyper_native_invoke6(object, HYPER_NATIVE_OP_CRASH_VIEW_HANDLE, index,
-				    (uintptr_t)output, sizeof(*output), 0, 0, 0);
+				    (uintptr_t)output, record_size, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_process_get_info(hyper_native_handle_t process,
-					   hyper_native_process_info_t *info)
+					   hyper_native_process_info_t *info, size_t record_size)
 {
 	return hyper_native_invoke6(process, HYPER_NATIVE_OP_PROCESS_GET_INFO, (uintptr_t)info,
-				    sizeof(*info), 0, 0, 0, 0);
+				    record_size, 0, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_task_inspector_scan_processes(hyper_native_handle_t inspector,
 							uint64_t cursor,
 							hyper_native_task_process_t *records,
-							size_t capacity)
+							size_t capacity, size_t record_size)
 {
 	return hyper_native_invoke6(inspector, HYPER_NATIVE_OP_TASK_INSPECTOR_SCAN_PROCESSES,
-				    cursor, (uintptr_t)records, capacity, 0, 0, 0);
+				    cursor, (uintptr_t)records, capacity, record_size, 0, 0);
 }
 
 hyper_call_result_t hyper_task_inspector_scan_threads(hyper_native_handle_t inspector,
 						      uint64_t cursor,
 						      hyper_native_task_thread_t *records,
-						      size_t capacity)
+						      size_t capacity, size_t record_size)
 {
 	return hyper_native_invoke6(inspector, HYPER_NATIVE_OP_TASK_INSPECTOR_SCAN_THREADS, cursor,
-				    (uintptr_t)records, capacity, 0, 0, 0);
+				    (uintptr_t)records, capacity, record_size, 0, 0);
 }
 
 hyper_call_result_t hyper_object_inspector_read_details(hyper_native_handle_t inspector,
 							uint64_t process, uint64_t target,
 							uint64_t cursor,
-							hyper_native_object_details_t *record)
+							hyper_native_object_details_t *record,
+							size_t record_size)
 {
 	return hyper_native_invoke6(inspector, HYPER_NATIVE_OP_OBJECT_INSPECTOR_READ_DETAILS,
-				    process, target, cursor, (uintptr_t)record, sizeof(*record), 0);
+				    process, target, cursor, (uintptr_t)record, record_size, 0);
 }
 
 hyper_call_result_t hyper_object_inspector_scan_objects(hyper_native_handle_t inspector,
 							uint64_t cursor,
 							hyper_native_object_inspection_t *records,
-							size_t capacity)
+							size_t capacity, size_t record_size)
 {
 	return hyper_native_invoke6(inspector, HYPER_NATIVE_OP_OBJECT_INSPECTOR_SCAN_OBJECTS,
-				    cursor, (uintptr_t)records, capacity, 0, 0, 0);
+				    cursor, (uintptr_t)records, capacity, record_size, 0, 0);
 }
 
 hyper_call_result_t hyper_object_inspector_scan_handles(hyper_native_handle_t inspector,
 							uint64_t process_koid, uint64_t cursor,
 							hyper_native_handle_inspection_t *records,
-							size_t capacity)
+							size_t capacity, size_t record_size)
 {
 	return hyper_native_invoke6(inspector, HYPER_NATIVE_OP_OBJECT_INSPECTOR_SCAN_HANDLES,
-				    process_koid, cursor, (uintptr_t)records, capacity, 0, 0);
+				    process_koid, cursor, (uintptr_t)records, capacity, record_size,
+				    0);
 }
 
 hyper_call_result_t hyper_memory_inspector_read(hyper_native_handle_t inspector,
-						hyper_native_memory_observation_t *observation)
+						hyper_native_memory_observation_t *observation,
+						size_t record_size)
 {
 	return hyper_native_invoke6(inspector, HYPER_NATIVE_OP_MEMORY_INSPECTOR_READ,
-				    (uintptr_t)observation, sizeof(*observation), 0, 0, 0, 0);
+				    (uintptr_t)observation, record_size, 0, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_cpu_inspector_read(hyper_native_handle_t inspector,
-					     hyper_native_cpu_observation_t *observation)
+					     hyper_native_cpu_observation_t *observation,
+					     size_t record_size)
 {
 	return hyper_native_invoke6(inspector, HYPER_NATIVE_OP_CPU_INSPECTOR_READ,
-				    (uintptr_t)observation, sizeof(*observation), 0, 0, 0, 0);
+				    (uintptr_t)observation, record_size, 0, 0, 0, 0);
 }
 
 static hyper_call_result_t inspector_derive(uint64_t operation, hyper_native_handle_t inspector,
@@ -691,9 +707,16 @@ hyper_call_result_t hyper_thread_create(uint64_t entry, uint64_t initial_sp, uin
 					uint64_t argument, const uint64_t *affinity_words,
 					size_t affinity_word_count)
 {
+	hyper_native_thread_create_request_t request = {
+		.entry = entry,
+		.stack = initial_sp,
+		.tls = tls,
+		.argument = argument,
+		.affinity_words = (uintptr_t)affinity_words,
+		.affinity_word_count = affinity_word_count,
+	};
 	return hyper_native_invoke6(hyper_native_execution_context(), HYPER_NATIVE_OP_THREAD_CREATE,
-				    entry, initial_sp, tls, argument, (uintptr_t)affinity_words,
-				    affinity_word_count);
+				    (uintptr_t)&request, sizeof(request), 0, 0, 0, 0);
 }
 
 hyper_native_status_t hyper_thread_start(hyper_native_handle_t thread)
@@ -751,8 +774,9 @@ hyper_call_result_t hyper_file_resize(hyper_native_handle_t file, uint64_t size)
 hyper_call_result_t hyper_directory_create_file(hyper_native_handle_t directory, const void *path,
 						size_t path_size, uint64_t rights, uint32_t mode)
 {
-	return hyper_native_invoke6(directory, HYPER_NATIVE_OP_DIRECTORY_CREATE_FILE,
-				    (uintptr_t)path, path_size, rights, mode, 0, 0);
+	return hyper_native_invoke6(
+		directory, HYPER_NATIVE_OP_DIRECTORY_OPEN_FILE, (uintptr_t)path, path_size, rights,
+		HYPER_NATIVE_FILE_OPEN_CREATE | HYPER_NATIVE_FILE_OPEN_EXCLUSIVE, mode, 0);
 }
 
 hyper_call_result_t hyper_directory_create_directory(hyper_native_handle_t directory,
@@ -917,8 +941,9 @@ hyper_call_result_t hyper_directory_open_directory_nofollow(hyper_native_handle_
 							    const void *path, size_t path_length,
 							    uint64_t rights)
 {
-	return hyper_native_invoke6(directory, HYPER_NATIVE_OP_DIRECTORY_OPEN_DIRECTORY_NOFOLLOW,
-				    (uintptr_t)path, path_length, rights, 0, 0, 0);
+	return hyper_native_invoke6(directory, HYPER_NATIVE_OP_DIRECTORY_OPEN_DIRECTORY,
+				    (uintptr_t)path, path_length, rights,
+				    HYPER_NATIVE_DIRECTORY_OPEN_NOFOLLOW, 0, 0);
 }
 
 hyper_call_result_t hyper_file_sync(hyper_native_handle_t file, uint32_t scope)
@@ -947,17 +972,17 @@ hyper_call_result_t hyper_directory_open_file_with_options(hyper_native_handle_t
 							   uint64_t rights, uint32_t options,
 							   uint32_t mode)
 {
-	return hyper_native_invoke6(directory, HYPER_NATIVE_OP_DIRECTORY_OPEN_FILE_WITH_OPTIONS,
-				    (uintptr_t)path, path_length, rights, options, mode, 0);
+	return hyper_native_invoke6(directory, HYPER_NATIVE_OP_DIRECTORY_OPEN_FILE, (uintptr_t)path,
+				    path_length, rights, options, mode, 0);
 }
 
 hyper_call_result_t hyper_virtual_machine_creation_lease_get_platform_info(
 	hyper_native_handle_t lease, uint32_t profile,
-	hyper_native_virtual_machine_platform_info_t *info)
+	hyper_native_virtual_machine_platform_info_t *info, size_t record_size)
 {
 	return hyper_native_invoke6(
 		lease, HYPER_NATIVE_OP_VIRTUAL_MACHINE_CREATION_LEASE_GET_PLATFORM_INFO, profile,
-		(uintptr_t)info, sizeof(*info), 0, 0, 0);
+		(uintptr_t)info, record_size, 0, 0, 0);
 }
 
 hyper_call_result_t hyper_filesystem_mount_ramfs(hyper_native_handle_t directory, const void *path,
@@ -969,10 +994,11 @@ hyper_call_result_t hyper_filesystem_mount_ramfs(hyper_native_handle_t directory
 
 hyper_call_result_t
 hyper_filesystem_switch_root(hyper_native_handle_t directory,
-			     const hyper_native_filesystem_root_switch_t *request)
+			     const hyper_native_filesystem_root_switch_t *request,
+			     size_t record_size)
 {
 	return hyper_native_invoke6(directory, HYPER_NATIVE_OP_FILESYSTEM_SWITCH_ROOT,
-				    (uintptr_t)request, 0, 0, 0, 0, 0);
+				    (uintptr_t)request, record_size, 0, 0, 0, 0);
 }
 
 /* Content protection is process-local; closing this token cannot release a
@@ -1002,10 +1028,11 @@ hyper_native_status_t hyper_process_builder_set_memory_lock(hyper_native_handle_
 
 hyper_call_result_t
 hyper_filesystem_begin_root_switch(hyper_native_handle_t directory,
-				   const hyper_native_filesystem_root_switch_t *request)
+				   const hyper_native_filesystem_root_switch_t *request,
+				   size_t record_size)
 {
 	return hyper_native_invoke6(directory, HYPER_NATIVE_OP_FILESYSTEM_BEGIN_ROOT_SWITCH,
-				    (uintptr_t)request, 0, 0, 0, 0, 0);
+				    (uintptr_t)request, record_size, 0, 0, 0, 0);
 }
 
 hyper_native_status_t hyper_filesystem_finish_root_switch(hyper_native_handle_t transition,

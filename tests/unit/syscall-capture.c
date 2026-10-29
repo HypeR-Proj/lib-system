@@ -4,17 +4,22 @@
 #include "syscall-capture.h"
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 static uint64_t expected_target;
 static uint64_t expected_operation;
 static uint64_t expected_arguments[6];
 static hyper_native_status_t expected_status;
 static int pending;
+static size_t expected_record_argument = 6;
+static size_t expected_record_size;
+static unsigned char expected_record[64];
 
 void expect_call(uint64_t target, uint64_t operation, const uint64_t arguments[6],
 		 hyper_native_status_t status)
 {
 	assert(!pending);
+	expected_record_argument = 6;
 	expected_target = target;
 	expected_operation = operation;
 	for (size_t index = 0; index < 6; ++index) {
@@ -22,6 +27,17 @@ void expect_call(uint64_t target, uint64_t operation, const uint64_t arguments[6
 	}
 	expected_status = status;
 	pending = 1;
+}
+
+void expect_record_call(uint64_t target, uint64_t operation, const uint64_t arguments[6],
+			size_t record_argument, const void *record, size_t record_size,
+			hyper_native_status_t status)
+{
+	assert(record_argument < 5 && record_size <= sizeof(expected_record));
+	expect_call(target, operation, arguments, status);
+	expected_record_argument = record_argument;
+	expected_record_size = record_size;
+	memcpy(expected_record, record, record_size);
 }
 
 void check_consumed(void)
@@ -38,6 +54,13 @@ hyper_call_result_t hyper_native_invoke6(uint64_t target, uint64_t operation, ui
 	assert(target == expected_target);
 	assert(operation == expected_operation);
 	for (size_t index = 0; index < 6; ++index) {
+		if (index == expected_record_argument) {
+			assert(actual[index] != 0);
+			assert(actual[index + 1] == expected_record_size);
+			assert(memcmp((const void *)(uintptr_t)actual[index], expected_record,
+				      expected_record_size) == 0);
+			continue;
+		}
 		if (actual[index] != expected_arguments[index]) {
 			fprintf(stderr, "operation %llu slot %zu: actual=%llx expected=%llx\n",
 				(unsigned long long)operation, index,

@@ -34,9 +34,10 @@ hyper_native_status_t hyper_handle_close(hyper_native_handle_t handle);
 hyper_call_result_t hyper_handle_duplicate(hyper_native_handle_t source, uint64_t requested_rights);
 hyper_call_result_t hyper_handle_replace(hyper_native_handle_t source, uint64_t requested_rights);
 hyper_call_result_t hyper_handle_get_info(hyper_native_handle_t handle,
-					  hyper_native_handle_info_t *info);
+					  hyper_native_handle_info_t *info, size_t record_size);
 hyper_call_result_t hyper_object_get_basic_info(hyper_native_handle_t handle,
-						hyper_native_object_basic_info_t *info);
+						hyper_native_object_basic_info_t *info,
+						size_t record_size);
 hyper_call_result_t hyper_object_wait_one(hyper_native_handle_t object, uint64_t signals,
 					  uint64_t deadline);
 hyper_call_result_t hyper_object_wait_many(const hyper_native_object_wait_item_t *items,
@@ -67,9 +68,11 @@ hyper_call_result_t hyper_directory_open_directory(hyper_native_handle_t directo
 hyper_call_result_t hyper_directory_begin_read(hyper_native_handle_t directory);
 /* Reads a DirectoryStream; zero starts, subsequent cookies are stream-issued. */
 hyper_call_result_t hyper_directory_read(hyper_native_handle_t stream, uint64_t cookie,
-					 hyper_native_directory_entry_t *records, size_t capacity);
+					 hyper_native_directory_entry_t *records, size_t capacity,
+					 size_t record_size);
 hyper_call_result_t hyper_directory_get_info(hyper_native_handle_t directory,
-					     hyper_native_directory_info_t *info);
+					     hyper_native_directory_info_t *info,
+					     size_t record_size);
 hyper_call_result_t hyper_file_write_at(hyper_native_handle_t file, uint32_t options,
 					uint64_t offset, const void *input, size_t size);
 hyper_call_result_t hyper_file_resize(hyper_native_handle_t file, uint64_t size);
@@ -91,9 +94,11 @@ hyper_call_result_t hyper_wait_set_wait(hyper_native_handle_t set, uint64_t dead
 
 hyper_call_result_t hyper_file_read_at(hyper_native_handle_t file, uint64_t offset, void *output,
 				       size_t output_capacity);
-hyper_call_result_t hyper_file_get_info(hyper_native_handle_t file, hyper_native_file_info_t *info);
+hyper_call_result_t hyper_file_get_info(hyper_native_handle_t file, hyper_native_file_info_t *info,
+					size_t record_size);
 hyper_call_result_t hyper_resource_domain_create(hyper_native_handle_t parent,
-						 const hyper_native_resource_limits_t *limits);
+						 const hyper_native_resource_limits_t *limits,
+						 size_t record_size);
 hyper_call_result_t hyper_task_group_create(hyper_native_handle_t factory,
 					    hyper_native_handle_t resource_domain);
 hyper_call_result_t
@@ -101,7 +106,8 @@ hyper_virtual_machine_creation_lease_create(hyper_native_handle_t authority,
 					    hyper_native_handle_t resource_domain);
 hyper_call_result_t
 hyper_virtual_machine_create(hyper_native_handle_t lease,
-			     const hyper_native_virtual_machine_configuration_t *configuration);
+			     const hyper_native_virtual_machine_configuration_t *configuration,
+			     size_t record_size);
 hyper_native_status_t hyper_pending_virtual_machine_set_memory(hyper_native_handle_t pending,
 							       hyper_native_handle_t vmo);
 /* Consumes virtual_serial only when the binding succeeds. */
@@ -115,7 +121,8 @@ hyper_call_result_t hyper_virtual_serial_write(hyper_native_handle_t virtual_ser
 					       const void *bytes, size_t byte_count);
 hyper_native_status_t
 hyper_pending_virtual_machine_set_bootstrap(hyper_native_handle_t pending,
-					    const hyper_native_virtual_cpu_bootstrap_t *bootstrap);
+					    const hyper_native_virtual_cpu_bootstrap_t *bootstrap,
+					    size_t record_size);
 hyper_native_status_t hyper_pending_virtual_machine_seal(hyper_native_handle_t pending);
 hyper_call_result_t hyper_pending_virtual_machine_install(hyper_native_handle_t pending);
 hyper_native_status_t hyper_virtual_cpu_start(hyper_native_handle_t virtual_cpu);
@@ -126,11 +133,13 @@ hyper_native_status_t hyper_pending_virtual_machine_abort(hyper_native_handle_t 
 hyper_native_status_t hyper_virtual_machine_request_stop(hyper_native_handle_t machine);
 hyper_call_result_t hyper_virtual_machine_creation_lease_get_platform_info(
 	hyper_native_handle_t lease, uint32_t profile,
-	hyper_native_virtual_machine_platform_info_t *info);
+	hyper_native_virtual_machine_platform_info_t *info, size_t record_size);
 hyper_call_result_t hyper_virtual_machine_get_info(hyper_native_handle_t machine,
-						   hyper_native_virtual_machine_info_t *info);
+						   hyper_native_virtual_machine_info_t *info,
+						   size_t record_size);
 hyper_call_result_t hyper_virtual_cpu_get_info(hyper_native_handle_t vcpu,
-					       hyper_native_virtual_cpu_info_t *info);
+					       hyper_native_virtual_cpu_info_t *info,
+					       size_t record_size);
 hyper_call_result_t hyper_vmo_create(uint64_t size);
 /** Acquire PROTECT; value0 is a process-local token and value1 the stable size.
  * Closing the token releases its reference. Existing mappings hold independent
@@ -202,44 +211,52 @@ hyper_call_result_t hyper_crash_view_read(hyper_native_handle_t view, uintptr_t 
 					  void *output, size_t length);
 hyper_call_result_t
 hyper_process_retirement_get_info(hyper_native_handle_t object,
-				  hyper_native_process_retirement_info_t *output);
+				  hyper_native_process_retirement_info_t *output,
+				  size_t record_size);
 hyper_call_result_t hyper_crash_view_get_info(hyper_native_handle_t object,
-					      hyper_native_process_retirement_info_t *output);
+					      hyper_native_process_retirement_info_t *output,
+					      size_t record_size);
 hyper_call_result_t hyper_crash_view_thread(hyper_native_handle_t object, uint64_t index,
-					    hyper_native_crash_thread_t *output);
+					    hyper_native_crash_thread_t *output,
+					    size_t record_size);
 hyper_call_result_t hyper_crash_view_mapping(hyper_native_handle_t object, uint64_t index,
-					     hyper_native_crash_mapping_t *output);
+					     hyper_native_crash_mapping_t *output,
+					     size_t record_size);
 hyper_call_result_t hyper_crash_view_handle(hyper_native_handle_t object, uint64_t index,
-					    hyper_native_crash_handle_t *output);
+					    hyper_native_crash_handle_t *output,
+					    size_t record_size);
 
 hyper_call_result_t hyper_process_get_info(hyper_native_handle_t process,
-					   hyper_native_process_info_t *info);
+					   hyper_native_process_info_t *info, size_t record_size);
 hyper_call_result_t hyper_task_inspector_scan_processes(hyper_native_handle_t inspector,
 							uint64_t cursor,
 							hyper_native_task_process_t *records,
-							size_t capacity);
+							size_t capacity, size_t record_size);
 hyper_call_result_t hyper_task_inspector_scan_threads(hyper_native_handle_t inspector,
 						      uint64_t cursor,
 						      hyper_native_task_thread_t *records,
-						      size_t capacity);
+						      size_t capacity, size_t record_size);
 /* Requires INSPECT | INSPECT_DETAILS. process == 0 selects a global KOID;
  * otherwise target is a full process-local handle. cursor starts at zero. */
 hyper_call_result_t hyper_object_inspector_read_details(hyper_native_handle_t inspector,
 							uint64_t process, uint64_t target,
 							uint64_t cursor,
-							hyper_native_object_details_t *record);
+							hyper_native_object_details_t *record,
+							size_t record_size);
 hyper_call_result_t hyper_object_inspector_scan_objects(hyper_native_handle_t inspector,
 							uint64_t cursor,
 							hyper_native_object_inspection_t *records,
-							size_t capacity);
+							size_t capacity, size_t record_size);
 hyper_call_result_t hyper_object_inspector_scan_handles(hyper_native_handle_t inspector,
 							uint64_t process_koid, uint64_t cursor,
 							hyper_native_handle_inspection_t *records,
-							size_t capacity);
+							size_t capacity, size_t record_size);
 hyper_call_result_t hyper_memory_inspector_read(hyper_native_handle_t inspector,
-						hyper_native_memory_observation_t *observation);
+						hyper_native_memory_observation_t *observation,
+						size_t record_size);
 hyper_call_result_t hyper_cpu_inspector_read(hyper_native_handle_t inspector,
-					     hyper_native_cpu_observation_t *observation);
+					     hyper_native_cpu_observation_t *observation,
+					     size_t record_size);
 hyper_call_result_t hyper_task_inspector_derive_process(hyper_native_handle_t inspector,
 							hyper_native_handle_t process);
 hyper_call_result_t hyper_task_inspector_derive_task_group(hyper_native_handle_t inspector,
@@ -281,7 +298,8 @@ hyper_call_result_t hyper_filesystem_mount_ramfs(hyper_native_handle_t directory
 						 size_t path_length);
 hyper_call_result_t
 hyper_filesystem_switch_root(hyper_native_handle_t directory,
-			     const hyper_native_filesystem_root_switch_t *request);
+			     const hyper_native_filesystem_root_switch_t *request,
+			     size_t record_size);
 
 hyper_call_result_t hyper_directory_scope_create(hyper_native_handle_t root,
 						 hyper_native_handle_t start, uint64_t rights);
@@ -339,7 +357,8 @@ hyper_native_status_t hyper_process_builder_set_memory_lock(hyper_native_handle_
 							    int enabled);
 hyper_call_result_t
 hyper_filesystem_begin_root_switch(hyper_native_handle_t directory,
-				   const hyper_native_filesystem_root_switch_t *request);
+				   const hyper_native_filesystem_root_switch_t *request,
+				   size_t record_size);
 hyper_native_status_t hyper_filesystem_finish_root_switch(hyper_native_handle_t transition,
 							  int commit);
 

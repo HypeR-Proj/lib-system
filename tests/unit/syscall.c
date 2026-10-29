@@ -50,10 +50,14 @@ static void transport(hyper_native_status_t status)
 	hyper_native_private_mapping_t mapping = {0};
 	EXPECT(VMAR_MAP_FILE, handle, other, loader, (uintptr_t)&mapping, sizeof(mapping), 0, 0);
 	STATUS(hyper_vmar_map_file(handle, other, loader, &mapping, sizeof(mapping)));
-	EXPECT(FILESYSTEM_SWITCH_ROOT, handle, (uintptr_t)&root_switch, 0, 0, 0, 0, 0);
-	RESULT(hyper_filesystem_switch_root(handle, &root_switch));
-	EXPECT(FILESYSTEM_BEGIN_ROOT_SWITCH, handle, (uintptr_t)&root_switch, 0, 0, 0, 0, 0);
-	RESULT(hyper_filesystem_begin_root_switch(handle, &root_switch));
+	EXPECT(FILESYSTEM_SWITCH_ROOT, handle, (uintptr_t)&root_switch, sizeof(root_switch), 0, 0,
+	       0, 0);
+	RESULT(hyper_filesystem_switch_root(handle, &root_switch,
+					    sizeof(hyper_native_filesystem_root_switch_t)));
+	EXPECT(FILESYSTEM_BEGIN_ROOT_SWITCH, handle, (uintptr_t)&root_switch, sizeof(root_switch),
+	       0, 0, 0, 0);
+	RESULT(hyper_filesystem_begin_root_switch(handle, &root_switch,
+						  sizeof(hyper_native_filesystem_root_switch_t)));
 	EXPECT(FILESYSTEM_FINISH_ROOT_SWITCH, handle, 1, 0, 0, 0, 0, 0);
 	STATUS(hyper_filesystem_finish_root_switch(handle, 1));
 	EXPECT(VMAR_LOCK_MEMORY, handle, offset, deadline, options, 0, 0, 0);
@@ -75,7 +79,17 @@ static void transport(hyper_native_status_t status)
 	EXPECT(HANDLE_DUPLICATE, handle, other, 0, 0, 0, 0, 0);
 	RESULT(hyper_handle_duplicate(handle, other));
 	EXPECT(HANDLE_GET_INFO, handle, (uintptr_t)&info, sizeof(info), 0, 0, 0, 0);
-	RESULT(hyper_handle_get_info(handle, &info));
+	RESULT(hyper_handle_get_info(handle, &info, sizeof(hyper_native_handle_info_t)));
+	uint64_t future_info[3] = {0};
+	EXPECT(HANDLE_GET_INFO, handle, (uintptr_t)future_info, sizeof(future_info), 0, 0, 0, 0);
+	RESULT(hyper_handle_get_info(handle, (hyper_native_handle_info_t *)future_info,
+				     sizeof(future_info)));
+	uint64_t future_entries[4 * (sizeof(hyper_native_directory_entry_t) / 8 + 1)] = {0};
+	EXPECT(DIRECTORY_READ, handle, offset, (uintptr_t)future_entries, 4, 0,
+	       sizeof(hyper_native_directory_entry_t) + 8, 0);
+	RESULT(hyper_directory_read(handle, offset,
+				    (hyper_native_directory_entry_t *)future_entries, 4,
+				    sizeof(hyper_native_directory_entry_t) + 8));
 	EXPECT(OBJECT_WAIT_ONE, handle, other, deadline, 0, 0, 0, 0);
 	RESULT(hyper_object_wait_one(handle, other, deadline));
 	EXPECT(BYTE_CHANNEL_WRITE, handle, 0, (uintptr_t)bytes, sizeof(bytes), 0, 0, 0);
@@ -94,8 +108,8 @@ static void transport(hyper_native_status_t status)
 	       (uintptr_t)destination, sizeof(destination), 0);
 	RESULT(hyper_directory_rename(handle, bytes, sizeof(bytes), other, destination,
 				      sizeof(destination)));
-	EXPECT(DIRECTORY_OPEN_FILE_WITH_OPTIONS, handle, (uintptr_t)bytes, sizeof(bytes), other,
-	       options, 0754, 0);
+	EXPECT(DIRECTORY_OPEN_FILE, handle, (uintptr_t)bytes, sizeof(bytes), other, options, 0754,
+	       0);
 	RESULT(hyper_directory_open_file_with_options(handle, bytes, sizeof(bytes), other, options,
 						      0754));
 	EXPECT(VMAR_MAP, handle, other, offset, deadline, 4096, options, 0);
@@ -103,14 +117,23 @@ static void transport(hyper_native_status_t status)
 	uint64_t affinity_words[2] = {3, UINT64_C(0x8000000000000000)};
 	EXPECT(VIRTUAL_CPU_SET_AFFINITY, handle, (uintptr_t)affinity_words, 2, 0, 0, 0, 0);
 	STATUS(hyper_virtual_cpu_set_affinity(handle, affinity_words, 2));
-	EXPECT(THREAD_CREATE, hyper_native_execution_context(), handle, other, offset, deadline, 0,
-	       0);
+	hyper_native_thread_create_request_t thread_request = {
+		.entry = handle,
+		.stack = other,
+		.tls = offset,
+		.argument = deadline,
+	};
+	uint64_t thread_arguments[6] = {0, sizeof(thread_request), 0, 0, 0, 0};
+	expect_record_call(hyper_native_execution_context(), HYPER_NATIVE_OP_THREAD_CREATE,
+			   thread_arguments, 0, &thread_request, sizeof(thread_request), status);
 	RESULT(hyper_thread_create(handle, other, offset, deadline, NULL, 0));
 	EXPECT(THREAD_SET_CURRENT_NAME, hyper_native_execution_context(), (uintptr_t)bytes,
 	       sizeof(bytes), 0, 0, 0, 0);
 	STATUS(hyper_thread_set_current_name(bytes, sizeof(bytes)));
-	EXPECT(THREAD_CREATE, hyper_native_execution_context(), handle, other, offset, deadline,
-	       (uintptr_t)affinity_words, 2);
+	thread_request.affinity_words = (uintptr_t)affinity_words;
+	thread_request.affinity_word_count = 2;
+	expect_record_call(hyper_native_execution_context(), HYPER_NATIVE_OP_THREAD_CREATE,
+			   thread_arguments, 0, &thread_request, sizeof(thread_request), status);
 	RESULT(hyper_thread_create(handle, other, offset, deadline, affinity_words, 2));
 	EXPECT(PROCESS_BUILDER_CREATE, handle, other, offset, deadline, loader, 0, 0);
 	RESULT(hyper_process_builder_create(handle, other, offset, deadline, loader));

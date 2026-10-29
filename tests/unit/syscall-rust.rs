@@ -8,6 +8,15 @@ use hyper_sys::{self as sys, CallResult, abi::*};
 unsafe extern "C" {
     fn expect_call(target: u64, operation: u64, arguments: *const u64, status: HyperNativeStatus);
     fn check_consumed();
+    fn expect_record_call(
+        target: u64,
+        operation: u64,
+        arguments: *const u64,
+        record_argument: usize,
+        record: *const u8,
+        record_size: usize,
+        status: HyperNativeStatus,
+    );
 }
 
 fn result(actual: CallResult, status: HyperNativeStatus) {
@@ -16,6 +25,32 @@ fn result(actual: CallResult, status: HyperNativeStatus) {
     assert_eq!(actual.value1, 0x89ab_cdef_0123_4567);
     // SAFETY: capture has no pointer arguments or side effects outside the fixture.
     unsafe { check_consumed() };
+}
+
+fn expect_thread_request(values: [u64; 6], status: HyperNativeStatus) {
+    let request = HyperNativeThreadCreateRequest {
+        entry: values[0],
+        stack: values[1],
+        tls: values[2],
+        argument: values[3],
+        affinity_words: values[4],
+        affinity_word_count: values[5],
+        flags: 0,
+        reserved: 0,
+    };
+    let args = [0, core::mem::size_of_val(&request) as u64, 0, 0, 0, 0];
+    // SAFETY: the capture immediately copies the initialized expected record.
+    unsafe {
+        expect_record_call(
+            0xe000_0000_0000_0001,
+            HYPER_NATIVE_OP_THREAD_CREATE,
+            args.as_ptr(),
+            0,
+            (&request as *const HyperNativeThreadCreateRequest).cast(),
+            core::mem::size_of_val(&request),
+            status,
+        );
+    }
 }
 
 fn transport(status: HyperNativeStatus) {
@@ -43,6 +78,104 @@ fn transport(status: HyperNativeStatus) {
     // kernel transport. It treats handles/scalars as opaque values and does not
     // dereference payload pointers. All pointer objects outlive each call.
     unsafe {
+        let mut scheduling = core::mem::MaybeUninit::<HyperNativeSchedulingParameters>::zeroed();
+        let size = core::mem::size_of::<HyperNativeSchedulingParameters>() as u64;
+        expect!(
+            HYPER_NATIVE_OP_THREAD_GET_CURRENT_SCHEDULING,
+            0xe000_0000_0000_0001,
+            [scheduling.as_mut_ptr() as u64, size, 0, 0, 0, 0]
+        );
+        result(
+            sys::thread_get_current_scheduling(scheduling.as_mut_ptr()),
+            status,
+        );
+        expect!(
+            HYPER_NATIVE_OP_THREAD_GET_SCHEDULING,
+            handle,
+            [scheduling.as_mut_ptr() as u64, size, 0, 0, 0, 0]
+        );
+        result(
+            sys::thread_get_scheduling(handle, scheduling.as_mut_ptr()),
+            status,
+        );
+        expect!(
+            HYPER_NATIVE_OP_VIRTUAL_CPU_GET_SCHEDULING,
+            handle,
+            [scheduling.as_mut_ptr() as u64, size, 0, 0, 0, 0]
+        );
+        result(
+            sys::virtual_cpu_get_scheduling(handle, scheduling.as_mut_ptr()),
+            status,
+        );
+        let mount = HyperNativeFilesystemMountRequest {
+            path: bytes.as_ptr() as u64,
+            path_size: bytes.len() as u64,
+            flags: HYPER_NATIVE_FILESYSTEM_MOUNT_READ_ONLY,
+            reserved: 0,
+        };
+        let mount_args = [
+            other,
+            offset,
+            deadline,
+            0,
+            core::mem::size_of_val(&mount) as u64,
+            0,
+        ];
+        expect_record_call(
+            handle,
+            HYPER_NATIVE_OP_FILESYSTEM_MOUNT,
+            mount_args.as_ptr(),
+            3,
+            (&mount as *const HyperNativeFilesystemMountRequest).cast(),
+            core::mem::size_of_val(&mount),
+            status,
+        );
+        result(
+            sys::filesystem_mount(
+                other,
+                offset,
+                deadline,
+                handle,
+                bytes.as_ptr(),
+                bytes.len(),
+                true,
+            ),
+            status,
+        );
+        let rpc = HyperNativeRpcTraceRequest {
+            phase: 1,
+            request: other,
+            detail: offset,
+            generation: deadline,
+            parent_connection: handle,
+            parent_request: 0xc123_4567_89ab_cdef,
+            flags: 0,
+            reserved: 0,
+        };
+        let rpc_args = [0, core::mem::size_of_val(&rpc) as u64, 0, 0, 0, 0];
+        expect_record_call(
+            handle,
+            HYPER_NATIVE_OP_BYTE_CHANNEL_TRACE_RPC,
+            rpc_args.as_ptr(),
+            0,
+            (&rpc as *const HyperNativeRpcTraceRequest).cast(),
+            core::mem::size_of_val(&rpc),
+            status,
+        );
+        result(
+            sys::byte_channel_trace_rpc(
+                handle,
+                [
+                    rpc.phase,
+                    rpc.request,
+                    rpc.detail,
+                    rpc.generation,
+                    rpc.parent_connection,
+                    rpc.parent_request,
+                ],
+            ),
+            status,
+        );
         expect!(
             HYPER_NATIVE_OP_FILESYSTEM_MOUNT_RAMFS,
             handle,
@@ -54,7 +187,11 @@ fn transport(status: HyperNativeStatus) {
         );
         expect!(HYPER_NATIVE_OP_FILE_PROTECT, handle, [0, 0, 0, 0, 0, 0]);
         result(sys::file_protect(handle), status);
-        expect!(HYPER_NATIVE_OP_FILE_PREFETCH, handle, [offset, 65536, 0, 0, 0, 0]);
+        expect!(
+            HYPER_NATIVE_OP_FILE_PREFETCH,
+            handle,
+            [offset, 65536, 0, 0, 0, 0]
+        );
         result(sys::file_prefetch(handle, offset, 65536), status);
         let mapping = HyperNativePrivateMapping {
             source_offset: 0,
@@ -99,13 +236,27 @@ fn transport(status: HyperNativeStatus) {
         expect!(
             HYPER_NATIVE_OP_FILESYSTEM_SWITCH_ROOT,
             handle,
-            [&request as *const _ as u64, 0, 0, 0, 0, 0]
+            [
+                &request as *const _ as u64,
+                core::mem::size_of::<HyperNativeFilesystemRootSwitch>() as u64,
+                0,
+                0,
+                0,
+                0
+            ]
         );
         result(sys::filesystem_switch_root(handle, &request), status);
         expect!(
             HYPER_NATIVE_OP_FILESYSTEM_BEGIN_ROOT_SWITCH,
             handle,
-            [&request as *const _ as u64, 0, 0, 0, 0, 0]
+            [
+                &request as *const _ as u64,
+                core::mem::size_of::<HyperNativeFilesystemRootSwitch>() as u64,
+                0,
+                0,
+                0,
+                0
+            ]
         );
         result(sys::filesystem_begin_root_switch(handle, &request), status);
         expect!(
@@ -267,11 +418,7 @@ fn transport(status: HyperNativeStatus) {
             status
         );
         check_consumed();
-        expect!(
-            HYPER_NATIVE_OP_THREAD_CREATE,
-            0xe000_0000_0000_0001,
-            [handle, other, offset, deadline, 0, 0]
-        );
+        expect_thread_request([handle, other, offset, deadline, 0, 0], status);
         result(
             sys::thread_create(handle, other, offset, deadline, core::ptr::null(), 0),
             status,
@@ -287,10 +434,9 @@ fn transport(status: HyperNativeStatus) {
             status
         );
         check_consumed();
-        expect!(
-            HYPER_NATIVE_OP_THREAD_CREATE,
-            0xe000_0000_0000_0001,
-            [handle, other, offset, deadline, affinity.as_ptr() as u64, 2]
+        expect_thread_request(
+            [handle, other, offset, deadline, affinity.as_ptr() as u64, 2],
+            status,
         );
         result(
             sys::thread_create(handle, other, offset, deadline, affinity.as_ptr(), 2),

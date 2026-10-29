@@ -34,7 +34,8 @@ hyper_native_status_t hyper_runtime_capabilities_initialize(const hyper_startup_
 		    HYPER_NATIVE_STATUS_OK)
 			continue;
 		hyper_native_handle_info_t info = {0};
-		if (hyper_handle_get_info(source, &info).status != HYPER_NATIVE_STATUS_OK)
+		if (hyper_handle_get_info(source, &info, sizeof(hyper_native_handle_info_t))
+			    .status != HYPER_NATIVE_STATUS_OK)
 			continue;
 		if (!(info.rights & HYPER_NATIVE_RIGHT_DUPLICATE))
 			continue;

@@ -19,10 +19,12 @@ static hyper_native_status_t scope_from(hyper_native_handle_t root, hyper_native
 {
 	*output = 0;
 	hyper_native_handle_info_t root_info = {0}, start_info = {0};
-	int64_t status = hyper_handle_get_info(root, &root_info).status;
+	int64_t status =
+		hyper_handle_get_info(root, &root_info, sizeof(hyper_native_handle_info_t)).status;
 	if (status)
 		return status;
-	status = hyper_handle_get_info(start, &start_info).status;
+	status = hyper_handle_get_info(start, &start_info, sizeof(hyper_native_handle_info_t))
+			 .status;
 	if (status)
 		return status;
 	hyper_call_result_t result =
@@ -36,7 +38,8 @@ static hyper_native_status_t duplicate(hyper_native_handle_t source, hyper_nativ
 {
 	*output = 0;
 	hyper_native_handle_info_t info = {0};
-	int64_t status = hyper_handle_get_info(source, &info).status;
+	int64_t status =
+		hyper_handle_get_info(source, &info, sizeof(hyper_native_handle_info_t)).status;
 	if (status)
 		return status;
 	hyper_call_result_t copy = hyper_handle_duplicate(source, info.rights);
@@ -112,7 +115,7 @@ hyper_native_status_t hyper_runtime_directory_change(const char *path, size_t si
 	if (status)
 		return status;
 	hyper_native_handle_info_t info = {0};
-	status = hyper_handle_get_info(base, &info).status;
+	status = hyper_handle_get_info(base, &info, sizeof(hyper_native_handle_info_t)).status;
 	hyper_call_result_t opened = {0};
 	if (!status) {
 		opened = hyper_directory_open_directory(base, path, size, info.rights);
