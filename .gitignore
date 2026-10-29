@@ -7,3 +7,10 @@ __pycache__/
 *.pyc
 .config
 .config.old
+
+# Links supplied by the workspace manifest from lib-std.
+/include/hyper/std.h
+/src/crt-std.c
+/src/std-fs.c
+/src/std-process.c
+/src/std.c
