@@ -228,8 +228,8 @@ Licensed under the Apache License, Version 2.0. See
 The SDK also installs `libhyper-std.a` and `crt-std.o` for ordinary Rust
 applications. Shared startup, stream buffering, and key-based thread-local
 storage live in `libhyper`; the std archive carries stateless adapters.
-See the [std runtime contract](https://github.com/HypeR-Proj/rust-std/blob/main/pal/README.md) and the
-[`hyper/std.h`](https://github.com/HypeR-Proj/rust-std/blob/main/shim/include/hyper/std.h) / [`hyper/thread.h`](include/hyper/thread.h)
+See the [std runtime contract](https://github.com/HypeR-Proj/lib-std/blob/main/pal/README.md) and the
+[`hyper/std.h`](https://github.com/HypeR-Proj/lib-std/blob/main/shim/include/hyper/std.h) / [`hyper/thread.h`](include/hyper/thread.h)
 interfaces. These are SDK interfaces, not additions to the kernel syscall ABI.
 
 Interactive standard streams inherit typed capability-channel connectors
@@ -314,8 +314,8 @@ current waiter allocation policy is unchanged.
 Use the [HypeR workspace](https://github.com/HypeR-Proj/HypeR) to resolve dependencies:
 
 ```sh
-./HypeR/hyper test lib
+python3 project.py test libc
 ```
 
-Build paths in detailed documentation refer to the generated `out/system` directory.
+Paths in the documentation are relative to the repo-managed workspace root.
 Edit this repository and prepare the workspace again before building.

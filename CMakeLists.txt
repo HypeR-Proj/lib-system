@@ -117,4 +117,12 @@ install(FILES $<TARGET_OBJECTS:hyper_crt_std> DESTINATION lib RENAME crt-std.o)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libhyper.so DESTINATION lib)
 install(FILES $<TARGET_OBJECTS:hyper_crt1> DESTINATION lib RENAME crt1.o)
 install(FILES $<TARGET_OBJECTS:hyper_crt> DESTINATION lib RENAME crt.o)
-install(DIRECTORY include/ DESTINATION include)
+# Manifest links may supply public headers from another source repository.
+# Export regular files so the installed SDK never points back into a checkout.
+file(GLOB_RECURSE public_headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
+foreach(header IN LISTS public_headers)
+    file(RELATIVE_PATH header_relative "${CMAKE_CURRENT_SOURCE_DIR}/include" "${header}")
+    get_filename_component(header_directory "${header_relative}" DIRECTORY)
+    file(REAL_PATH "${header}" header_source)
+    install(FILES "${header_source}" DESTINATION "include/${header_directory}")
+endforeach()
