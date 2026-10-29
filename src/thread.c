@@ -27,6 +27,7 @@ typedef struct thread_state {
 	tls_value_t *values;
 	hyper_stack_t *stack;
 	unsigned heap_arena;
+	int c_errno;
 } thread_state_t;
 
 static atomic_uint next_heap_arena;
@@ -115,6 +116,11 @@ static thread_state_t *require_current(void)
 	if (hyper_runtime_thread_attach() != HYPER_NATIVE_STATUS_OK)
 		hyper_process_exit(HYPER_NATIVE_STATUS_NO_MEMORY);
 	return current();
+}
+
+int *hyper_runtime_errno_location(void)
+{
+	return &require_current()->c_errno;
 }
 
 uintptr_t hyper_runtime_tls_create(hyper_tls_destructor_t destructor)

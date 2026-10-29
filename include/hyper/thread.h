@@ -15,6 +15,9 @@
  * Rust uses key TLS; ELF PT_TLS / compiler-native TLS is not supported yet. */
 hyper_native_status_t hyper_runtime_thread_attach(void);
 void hyper_runtime_thread_detach(void);
+/* Shared C-library errno cell. Zeroed at attach and retained until detach;
+ * accessing it on an attached thread performs no allocation. */
+int *hyper_runtime_errno_location(void);
 typedef void (*hyper_tls_destructor_t)(void *);
 uintptr_t hyper_runtime_tls_create(hyper_tls_destructor_t destructor);
 void hyper_runtime_tls_destroy(uintptr_t key);

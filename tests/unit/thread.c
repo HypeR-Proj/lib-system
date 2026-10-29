@@ -55,9 +55,11 @@ static void destroy(void *value)
 
 static void *worker(void *argument)
 {
-	(void)argument;
 	assert(hyper_runtime_thread_attach() == 0);
 	assert(hyper_runtime_thread_attach() == 0);
+	int *error = hyper_runtime_errno_location();
+	assert(*error == 0);
+	*error = (int)(uintptr_t)argument;
 	assert(hyper_runtime_tls_get(key) == NULL);
 	unsigned *count = calloc(1, sizeof(*count));
 	assert(count);
@@ -69,6 +71,8 @@ static void *worker(void *argument)
 		while (atomic_exchange_explicit(&round, 1, memory_order_acquire))
 			sched_yield();
 		assert(hyper_runtime_tls_get(key) == count);
+		assert(hyper_runtime_errno_location() == error);
+		assert(*error == (int)(uintptr_t)argument);
 		atomic_store_explicit(&round, 0, memory_order_release);
 	}
 	hyper_runtime_thread_detach();
@@ -78,10 +82,12 @@ static void *worker(void *argument)
 
 int main(void)
 {
+	assert(*hyper_runtime_errno_location() == 0);
+	*hyper_runtime_errno_location() = 77;
 	key = hyper_runtime_tls_create(destroy);
 	pthread_t threads[4];
 	for (unsigned i = 0; i < 4; ++i)
-		assert(pthread_create(&threads[i], NULL, worker, NULL) == 0);
+		assert(pthread_create(&threads[i], NULL, worker, (void *)(uintptr_t)(i + 1)) == 0);
 	while (atomic_load(&entered) != 4)
 		sched_yield();
 	__atomic_store_n(&state, 1, __ATOMIC_RELEASE);
@@ -89,6 +95,7 @@ int main(void)
 	for (unsigned i = 0; i < 4; ++i)
 		assert(pthread_join(threads[i], NULL) == 0);
 	assert(atomic_load(&destructors) == 4);
+	assert(*hyper_runtime_errno_location() == 77);
 	uint64_t start = hyper_clock_get_monotonic().value0;
 	assert(hyper_runtime_wait_u32(&state, 1, start + 1000000) == 0);
 	assert(hyper_clock_get_monotonic().value0 >= start + 1000000);
@@ -97,5 +104,8 @@ int main(void)
 	assert(hyper_runtime_thread_attach() == 0);
 	hyper_runtime_tls_set(key, (void *)1);
 	hyper_runtime_thread_detach(); /* Deleted key's destructor must not run. */
+	assert(hyper_runtime_thread_attach() == 0);
+	assert(*hyper_runtime_errno_location() == 0);
+	hyper_runtime_thread_detach();
 	return 0;
 }
