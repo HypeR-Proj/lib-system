@@ -7,7 +7,7 @@
 #include <stdatomic.h>
 #include "mutex-internal.h"
 
-/* Root and cwd owners live in libhyper, shared by all language shims/DSOs.
+/* Root and cwd owners live in libsystem, shared by all language shims/DSOs.
  * Acquirers duplicate under the mutex; replace releases the old owner after
  * unlocking. No borrowed handle can race a cwd change and close. */
 static hyper_mutex_t cwd_lock;

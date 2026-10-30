@@ -3,16 +3,22 @@ SPDX-FileCopyrightText: 2026 roolrz
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# HypeR Lib
+# HypeR System Library
 
-HypeR Lib is the freestanding C foundation for applications compiled directly
-for the HypeR Native ABI. It provides low-level syscall veneers and the small
-set of C primitives required before a complete native runtime exists.
+`lib-system` provides the shared Native runtime used by Rust, C and C++
+applications. It owns process startup, the process heap, thread state and
+low-level HypeR system interfaces. The SDK installs `libsystem.so` and
+`libsystem.a` from this repository.
+
+The standard C library lives in [lib-musl](https://github.com/HypeR-Proj/lib-musl),
+which builds on this runtime. [lib-cxx](https://github.com/HypeR-Proj/lib-cxx)
+uses both layers; Rust also uses this runtime directly. Public C ABI symbols and
+headers retain their `hyper_` and `hyper/` names.
 
 This component is deliberately not a Linux, FreeBSD, or POSIX compatibility
 layer. Foreign OS personalities are outside the Native SDK and are not a
 roadmap commitment. Any future compatibility runtime would keep its contracts
-separate from HypeR Lib.
+separate from the system runtime.
 
 ## Current scope
 
@@ -26,7 +32,7 @@ separate from HypeR Lib.
   through `hyper_runtime_errno_location()` without allocating on access;
 - freestanding memory and string primitives, including `memcpy`, `memset`,
   `memcmp`, `memchr`, `strlen`, `strcmp`, `strncmp`, and `strchr`;
-- Clang-only cross compilation into `libhyper.a` and `libhyper.so`; and
+- Clang-only cross compilation into `libsystem.a` and `libsystem.so`; and
 - a public-interface-only Native application fixture for product integration.
 
 Native userspace supports AArch64 and RV64GC/LP64D. Additional architecture
@@ -78,8 +84,8 @@ a freeable minimum allocation when memory is available; `free(NULL)` is a no-op;
 allocation. `aligned_alloc` requires a power-of-two alignment and a size divisible
 by it. `<hyper/heap.h>` exposes the arbitrary-size aligned allocation interface
 used by Rust. Each pointer must be released through the same process heap.
-Dynamic applications and their DSOs share the allocator in `libhyper.so`;
-static applications use the same implementation from `libhyper.a`.
+Dynamic applications and their DSOs share the allocator in `libsystem.so`;
+static applications use the same implementation from `libsystem.a`.
 
 ## Guarded, growable stacks
 
@@ -170,12 +176,12 @@ by growing the stack. No main-thread check is needed at the call site.
 
 ## Build
 
-HypeR Lib consumes the generated C header from `sdk/abi/`. The include
+The system runtime consumes the generated C header from `sdk/abi/`. The include
 directory is injected explicitly so the runtime does not carry a second ABI
 definition.
 
 ```sh
-cmake -S stdlib/hyper -B target/sdk-lib/aarch64 \
+cmake -S stdlib/system -B target/sdk-lib/aarch64 \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_ASM_COMPILER=clang \
   -DCMAKE_AR=llvm-ar \
@@ -198,7 +204,7 @@ Library tests under `tests/unit` are host-executed unit tests for implementation
 semantics. They can be run independently of the target archive:
 
 ```sh
-cmake -S stdlib/hyper/tests/unit -B target/sdk-lib/unit \
+cmake -S stdlib/system/tests/unit -B target/sdk-lib/unit \
   -DCMAKE_C_COMPILER=clang \
   -DHYPER_ABI_INCLUDE_DIR="$PWD/sdk/abi/include"
 cmake --build target/sdk-lib/unit
@@ -229,7 +235,7 @@ Licensed under the Apache License, Version 2.0. See
 
 The SDK also installs `libhyper-std.a` and `crt-std.o` for ordinary Rust
 applications. Shared startup, stream buffering, and key-based thread-local
-storage live in `libhyper`; the std archive carries stateless adapters.
+storage live in `libsystem`; the std archive carries stateless adapters.
 See the [std runtime contract](https://github.com/HypeR-Proj/lib-std/blob/main/pal/README.md) and the
 [`hyper/std.h`](https://github.com/HypeR-Proj/lib-std/blob/main/shim/include/hyper/std.h) / [`hyper/thread.h`](include/hyper/thread.h)
 interfaces. These are SDK interfaces, not additions to the kernel syscall ABI.
@@ -316,7 +322,7 @@ current waiter allocation policy is unchanged.
 Use the [HypeR workspace](https://github.com/HypeR-Proj/HypeR) to resolve dependencies:
 
 ```sh
-python3 project.py test libc
+python3 project.py test lib-system
 ```
 
 Paths in the documentation are relative to the repo-managed workspace root.

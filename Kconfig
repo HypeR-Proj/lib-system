@@ -1,4 +1,4 @@
 # SPDX-FileCopyrightText: 2026 roolrz
 # SPDX-License-Identifier: Apache-2.0
 
-# lib: no additional build-time options.
+# lib-system: no additional build-time options.

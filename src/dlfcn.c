@@ -4,8 +4,8 @@
 
 /*
  * Static-link fallback for the runtime-loader API. A dynamically interpreted
- * process resolves these names from its interpreter before libhyper. Keeping
- * the fallback in libhyper makes the link contract uniform while reporting a
+ * process resolves these names from its interpreter before libsystem. Keeping
+ * the fallback in libsystem makes the link contract uniform while reporting a
  * deterministic failure when a static image has no runtime linker.
  */
 
