@@ -2,7 +2,7 @@
   "SPDX-FileCopyrightText": "2026 roolrz",
   "SPDX-License-Identifier": "Apache-2.0",
   "version": 1,
-  "name": "libc",
+  "name": "lib-system",
   "kind": "library",
   "origin": {
     "repository": "https://github.com/roolrz/HypeR",
@@ -13,7 +13,7 @@
     [
       "cmake",
       "-S",
-      "stdlib/hyper/tests/unit",
+      "stdlib/system/tests/unit",
       "-B",
       "target/module-lib",
       "-DCMAKE_C_COMPILER=clang",

@@ -28,10 +28,10 @@ def main():
         run(args.rustc, "--edition=2024", "--crate-type=rlib", "--crate-name=hyper_sys",
             str(root / "stdlib/rust/hyper-sys/src/lib.rs"), "--extern", f"hyper_abi={abi}", "-o", str(raw))
         objects = []
-        for source in [unit / "syscall-capture.c", root / "stdlib/hyper/src/syscall.c"]:
+        for source in [unit / "syscall-capture.c", root / "stdlib/system/src/syscall.c"]:
             obj = out / (source.stem + ".o")
             run(args.cc, "-std=c17", "-Wall", "-Wextra", "-Werror", "-UNDEBUG",
-                f"-I{root / 'sdk/abi/include'}", f"-I{root / 'stdlib/hyper/include'}",
+                f"-I{root / 'sdk/abi/include'}", f"-I{root / 'stdlib/system/include'}",
                 "-c", str(source), "-o", str(obj))
             objects.extend(["-C", f"link-arg={obj}"])
         binary = out / "syscall-rust"

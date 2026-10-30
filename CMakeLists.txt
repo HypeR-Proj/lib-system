@@ -9,10 +9,10 @@ endif()
 if(NOT DEFINED CMAKE_RANLIB)
     find_program(CMAKE_RANLIB NAMES llvm-ranlib REQUIRED)
 endif()
-project(HypeRLib VERSION 0.0.0 LANGUAGES C ASM)
+project(HypeRSystem VERSION 0.0.0 LANGUAGES C ASM)
 
 if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
-    message(FATAL_ERROR "HypeR Lib requires Clang")
+    message(FATAL_ERROR "HypeR system runtime requires Clang")
 endif()
 
 set(HYPER_ARCH "aarch64" CACHE STRING "HypeR target architecture")
@@ -92,29 +92,29 @@ target_include_directories(hyper_shared_objects
         $<BUILD_INTERFACE:${HYPER_ABI_INCLUDE_DIR}>
         $<INSTALL_INTERFACE:include>
 )
-set_target_properties(hyper PROPERTIES OUTPUT_NAME hyper)
+set_target_properties(hyper PROPERTIES OUTPUT_NAME system)
 
 if(NOT HYPER_LD)
     message(FATAL_ERROR "HYPER_LD must name ld.lld")
 endif()
 add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libhyper.so
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libsystem.so
     COMMAND ${HYPER_LD}
         -shared $<TARGET_OBJECTS:hyper_shared_objects>
         --no-undefined --fatal-warnings -Bsymbolic -z text -z relro -z now
         --build-id=none --gc-sections -z noexecstack -z max-page-size=4096
-        --hash-style=sysv -soname libhyper.so
-        -o ${CMAKE_CURRENT_BINARY_DIR}/libhyper.so
+        --hash-style=sysv -soname libsystem.so
+        -o ${CMAKE_CURRENT_BINARY_DIR}/libsystem.so
     DEPENDS hyper_shared_objects
     COMMAND_EXPAND_LISTS
     VERBATIM
 )
-add_custom_target(hyper_shared ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/libhyper.so)
+add_custom_target(hyper_shared ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/libsystem.so)
 
 install(TARGETS hyper ARCHIVE DESTINATION lib)
 install(TARGETS hyper_std ARCHIVE DESTINATION lib)
 install(FILES $<TARGET_OBJECTS:hyper_crt_std> DESTINATION lib RENAME crt-std.o)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libhyper.so DESTINATION lib)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsystem.so DESTINATION lib)
 install(FILES $<TARGET_OBJECTS:hyper_crt1> DESTINATION lib RENAME crt1.o)
 install(FILES $<TARGET_OBJECTS:hyper_crt> DESTINATION lib RENAME crt.o)
 # Manifest links may supply public headers from another source repository.

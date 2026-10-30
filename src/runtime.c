@@ -41,7 +41,7 @@ static char **copy_strings(char *const *strings, size_t count)
 	return copy;
 }
 
-/* Invoked through the relocated libhyper image, not the interpreter's static
+/* Invoked through the relocated libsystem image, not the interpreter's static
  * copy of runtime primitives, so constructors and main share one heap. */
 hyper_native_status_t hyper_runtime_initialize(const uintptr_t *initial_stack)
 {
