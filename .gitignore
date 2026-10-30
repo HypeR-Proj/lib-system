@@ -8,7 +8,7 @@ __pycache__/
 .config
 .config.old
 
-# Links supplied by the workspace manifest from lib-std.
+# Links supplied by the workspace manifest from lib-rust-std.
 /include/hyper/std.h
 /src/crt-std.c
 /src/std-fs.c

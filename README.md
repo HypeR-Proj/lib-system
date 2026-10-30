@@ -236,8 +236,8 @@ Licensed under the Apache License, Version 2.0. See
 The SDK also installs `libhyper-std.a` and `crt-std.o` for ordinary Rust
 applications. Shared startup, stream buffering, and key-based thread-local
 storage live in `libsystem`; the std archive carries stateless adapters.
-See the [std runtime contract](https://github.com/HypeR-Proj/lib-std/blob/main/pal/README.md) and the
-[`hyper/std.h`](https://github.com/HypeR-Proj/lib-std/blob/main/shim/include/hyper/std.h) / [`hyper/thread.h`](include/hyper/thread.h)
+See the [std runtime contract](https://github.com/HypeR-Proj/lib-rust-std/blob/main/pal/README.md) and the
+[`hyper/std.h`](https://github.com/HypeR-Proj/lib-rust-std/blob/main/shim/include/hyper/std.h) / [`hyper/thread.h`](include/hyper/thread.h)
 interfaces. These are SDK interfaces, not additions to the kernel syscall ABI.
 
 Interactive standard streams inherit typed capability-channel connectors
