@@ -22,6 +22,8 @@ separate from HypeR Lib.
   channels, VMO/VMAR operations, staged Process construction, and core
   lifecycle wrappers;
 - a shared process heap with `malloc`, `calloc`, `realloc`, `free`, and `aligned_alloc`;
+- one C `errno` cell per attached Native thread, shared by standard libraries
+  through `hyper_runtime_errno_location()` without allocating on access;
 - freestanding memory and string primitives, including `memcpy`, `memset`,
   `memcmp`, `memchr`, `strlen`, `strcmp`, `strncmp`, and `strchr`;
 - Clang-only cross compilation into `libhyper.a` and `libhyper.so`; and
