@@ -30,5 +30,37 @@
       "target/module-lib",
       "--output-on-failure"
     ]
-  ]
+  ],
+  "artifacts": [
+    {
+      "source": "{sdk}/lib/libsystem.so",
+      "destination": "lib64/{arch}-hyper-hyper/libsystem.so",
+      "mode": "0755",
+      "profiles": [
+        "system",
+        "development"
+      ],
+      "environment": "system"
+    }
+  ],
+  "build": {
+    "actions": {
+      "all": [
+        [
+          "make",
+          "-C",
+          "{workspace}",
+          "sdk"
+        ]
+      ],
+      "build": [
+        [
+          "make",
+          "-C",
+          "{workspace}",
+          "sdk"
+        ]
+      ]
+    }
+  }
 }
