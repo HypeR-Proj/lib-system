@@ -4,6 +4,7 @@
 
 #include <hyper/invocation.h>
 #include <hyper/syscall.h>
+#include <hyper/vdso.h>
 
 hyper_call_result_t hyper_abi_query(void)
 {
@@ -19,6 +20,9 @@ hyper_call_result_t hyper_system_config(uint64_t key)
 
 hyper_call_result_t hyper_clock_get_monotonic(void)
 {
+	hyper_call_result_t fast = hyper_vdso_monotonic();
+	if (fast.status != HYPER_NATIVE_STATUS_NOT_SUPPORTED)
+		return fast;
 	return hyper_native_invoke6(hyper_native_system_info(), HYPER_NATIVE_OP_CLOCK_GET_MONOTONIC,
 				    0, 0, 0, 0, 0, 0);
 }
@@ -963,6 +967,9 @@ hyper_call_result_t hyper_file_unlock(hyper_native_handle_t file)
 
 hyper_call_result_t hyper_clock_get_realtime(void)
 {
+	hyper_call_result_t fast = hyper_vdso_realtime();
+	if (fast.status != HYPER_NATIVE_STATUS_NOT_SUPPORTED)
+		return fast;
 	return hyper_native_invoke6(hyper_native_system_info(), HYPER_NATIVE_OP_CLOCK_GET_REALTIME,
 				    0, 0, 0, 0, 0, 0);
 }

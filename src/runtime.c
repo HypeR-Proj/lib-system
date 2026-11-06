@@ -7,6 +7,7 @@
 #include <hyper/heap.h>
 #include <hyper/thread.h>
 #include <hyper/system.h>
+#include <hyper/vdso.h>
 #include "stack-internal.h"
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -55,6 +56,7 @@ hyper_native_status_t hyper_runtime_initialize(const uintptr_t *initial_stack)
 	status = hyper_native_initialize_invocation(&startup);
 	if (status != HYPER_NATIVE_STATUS_OK)
 		return status;
+	hyper_vdso_initialize(&startup);
 	status = hyper_heap_initialize(&startup);
 	if (status != HYPER_NATIVE_STATUS_OK)
 		return status;

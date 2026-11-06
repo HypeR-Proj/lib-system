@@ -10,6 +10,14 @@ applications. It owns process startup, the process heap, thread state and
 low-level HypeR system interfaces. The SDK installs `libsystem.so` and
 `libsystem.a` from this repository.
 
+The runtime resolves optional versioned clock and IPC-activity functions from
+the kernel's vDSO ELF in auxiliary-vector entry 33. Monotonic/realtime calls use
+the same clock domains as their syscall fallbacks. Missing entries or unsupported
+hardware clocks fall back individually; inactive IPC tracing requires no syscall
+after connection initialization when the matching vDSO is present. This is an
+observation hint, never tracing authority. The accompanying live data remains
+read-only and non-executable and has no application-visible field layout.
+
 The standard C library lives in [lib-musl](https://github.com/HypeR-Proj/lib-musl),
 which builds on this runtime. [lib-cxx](https://github.com/HypeR-Proj/lib-cxx)
 uses both layers; Rust also uses this runtime directly. Public C ABI symbols and
