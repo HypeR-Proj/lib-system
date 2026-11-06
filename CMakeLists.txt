@@ -47,6 +47,8 @@ set(HYPER_RUNTIME_SOURCES
     src/startup.c
     src/string.c
     src/syscall.c
+    src/vdso.c
+    src/vdso-map.c
 )
 
 add_library(hyper STATIC ${HYPER_RUNTIME_SOURCES})

@@ -49,6 +49,7 @@ add_test(NAME startup-stack COMMAND hyper-startup-test)
 
 add_executable(hyper-syscall-test
     ../../src/syscall.c
+    ../../src/vdso.c
     syscall.c
     syscall-capture.c
 )
@@ -65,6 +66,12 @@ target_include_directories(hyper-syscall-test PRIVATE
 )
 
 add_test(NAME syscall-veneer COMMAND hyper-syscall-test)
+
+add_executable(hyper-vdso-test vdso.c)
+target_compile_features(hyper-vdso-test PRIVATE c_std_17)
+target_compile_options(hyper-vdso-test PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+target_include_directories(hyper-vdso-test PRIVATE ../../include ${HYPER_ABI_INCLUDE_DIR})
+add_test(NAME optional-vdso COMMAND hyper-vdso-test)
 
 # Compile the real no_std SDK with the host compiler; no installed SDK/sysroot
 # or target executable is needed to verify the Rust/C transport correspondence.
@@ -112,7 +119,7 @@ target_include_directories(hyper-stack-test PRIVATE ../../include ${HYPER_ABI_IN
 target_link_libraries(hyper-stack-test PRIVATE Threads::Threads)
 add_test(NAME userspace-stacks COMMAND hyper-stack-test)
 
-add_executable(hyper-runtime-startup-test ../../src/bootstrap.c ../../src/runtime.c ../../src/startup.c ../../src/invocation.c runtime-startup.c)
+add_executable(hyper-runtime-startup-test ../../src/bootstrap.c ../../src/runtime.c ../../src/startup.c ../../src/invocation.c ../../src/vdso.c runtime-startup.c)
 target_compile_features(hyper-runtime-startup-test PRIVATE c_std_17)
 target_compile_options(hyper-runtime-startup-test PRIVATE -Wall -Wextra -Werror -UNDEBUG)
 target_include_directories(hyper-runtime-startup-test PRIVATE ../../include ${HYPER_ABI_INCLUDE_DIR})
