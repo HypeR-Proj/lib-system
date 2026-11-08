@@ -30,6 +30,16 @@ separate from the system runtime.
 
 ## Current scope
 
+`hyper/random.h` requests initialized secure randomness through an optional
+startup capability retained by the runtime. `hyper_random_read` returns completed
+chunks (at most 192 bytes per request); an error after progress produces a short
+successful prefix. `hyper_random_fill` fills the requested buffer or reports an
+error, which may leave a written prefix. Both preserve one absolute deadline;
+`UINT64_MAX` permits an infinite wait. `HYPER_RANDOM_NONBLOCK` skips retries while
+entropy is not ready, while IPC admission and reply may still wait. Missing
+authority, unsupported sources and provider failure never select a weak fallback.
+
+
 - AArch64 and RV64 Native syscall entry using the published machine conventions;
 - Native startup-stack parsing, CRT entry, and bootstrap-handle discovery;
 - capability-scoped console and filesystem I/O, object wait, byte and capability
