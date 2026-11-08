@@ -141,6 +141,9 @@ static void transport(hyper_native_status_t status)
 	STATUS(hyper_process_builder_add_handle(handle, other, options, 27, offset, 1));
 	EXPECT(WAIT_SET_WAIT, handle, deadline, (uintptr_t)bytes, sizeof(bytes), 0, 0, 0);
 	RESULT(hyper_wait_set_wait(handle, deadline, bytes, sizeof(bytes)));
+	uint64_t events[2 * 4] = {0};
+	EXPECT(WAIT_SET_WAIT_BATCH, handle, deadline, (uintptr_t)events, 2, 32, options, 0);
+	RESULT(hyper_wait_set_wait_batch(handle, deadline, events, 2, 32, options));
 	uint32_t word = 1;
 	EXPECT(ATOMIC_WAIT, hyper_native_execution_context(), (uintptr_t)&word, options, deadline,
 	       0, 0, 0);

@@ -92,6 +92,12 @@ hyper_call_result_t hyper_wait_set_remove(hyper_native_handle_t set, uint64_t re
 hyper_call_result_t hyper_wait_set_wait(hyper_native_handle_t set, uint64_t deadline, void *output,
 					size_t output_size);
 
+/* Returns the number of committed event records in value0. Only that prefix is
+ * valid; a later copy failure can leave the next record partially written. */
+hyper_call_result_t hyper_wait_set_wait_batch(hyper_native_handle_t set, uint64_t deadline,
+					      void *output, size_t capacity, size_t record_size,
+					      uint64_t options);
+
 hyper_call_result_t hyper_file_read_at(hyper_native_handle_t file, uint64_t offset, void *output,
 				       size_t output_capacity);
 hyper_call_result_t hyper_file_get_info(hyper_native_handle_t file, hyper_native_file_info_t *info,

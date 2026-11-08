@@ -829,6 +829,14 @@ hyper_call_result_t hyper_wait_set_wait(hyper_native_handle_t set, uint64_t dead
 				    output_size, 0, 0, 0);
 }
 
+hyper_call_result_t hyper_wait_set_wait_batch(hyper_native_handle_t set, uint64_t deadline,
+					      void *output, size_t capacity, size_t record_size,
+					      uint64_t options)
+{
+	return hyper_native_invoke6(set, HYPER_NATIVE_OP_WAIT_SET_WAIT_BATCH, deadline,
+				    (uintptr_t)output, capacity, record_size, options, 0);
+}
+
 hyper_call_result_t hyper_process_get_current_id(void)
 {
 	return hyper_native_invoke6(hyper_native_execution_context(),

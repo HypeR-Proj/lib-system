@@ -442,6 +442,31 @@ fn transport(status: HyperNativeStatus) {
             sys::thread_create(handle, other, offset, deadline, affinity.as_ptr(), 2),
             status,
         );
+        let mut events = [0_u64; 8];
+        let batch_options = 0xe123_4567_89ab_cdef;
+        expect!(
+            HYPER_NATIVE_OP_WAIT_SET_WAIT_BATCH,
+            handle,
+            [
+                deadline,
+                events.as_mut_ptr() as u64,
+                2,
+                32,
+                batch_options,
+                0
+            ]
+        );
+        result(
+            sys::wait_set_wait_batch(
+                handle,
+                deadline,
+                events.as_mut_ptr().cast(),
+                2,
+                32,
+                batch_options,
+            ),
+            status,
+        );
         let word = 1_u32;
         expect!(
             HYPER_NATIVE_OP_ATOMIC_WAIT,
