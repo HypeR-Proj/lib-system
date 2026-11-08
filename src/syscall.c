@@ -198,6 +198,21 @@ hyper_call_result_t hyper_vmo_create_snapshot(hyper_native_handle_t vmo)
 	return hyper_native_invoke6(vmo, HYPER_NATIVE_OP_VMO_CREATE_SNAPSHOT, 0, 0, 0, 0, 0, 0);
 }
 
+hyper_native_status_t hyper_vmo_wait_u32(hyper_native_handle_t vmo, uint64_t offset,
+					 uint32_t expected, uint64_t deadline, uint64_t options)
+{
+	return hyper_native_invoke6(vmo, HYPER_NATIVE_OP_VMO_WAIT_U32, offset, expected, deadline,
+				    options, 0, 0)
+		.status;
+}
+
+hyper_call_result_t hyper_vmo_wake_u32(hyper_native_handle_t vmo, uint64_t offset, uint32_t count,
+				       uint64_t options)
+{
+	return hyper_native_invoke6(vmo, HYPER_NATIVE_OP_VMO_WAKE_U32, offset, count, options, 0, 0,
+				    0);
+}
+
 hyper_native_status_t hyper_vmar_map_private(hyper_native_handle_t vmar,
 					     hyper_native_handle_t snapshot,
 					     const hyper_native_private_mapping_t *mapping,

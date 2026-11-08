@@ -151,6 +151,10 @@ static void transport(hyper_native_status_t status)
 	EXPECT(ATOMIC_WAKE, hyper_native_execution_context(), (uintptr_t)&word, options, 0, 0, 0,
 	       0);
 	RESULT(hyper_atomic_wake(&word, options));
+	EXPECT(VMO_WAIT_U32, handle, offset, options, deadline, other, 0, 0);
+	STATUS(hyper_vmo_wait_u32(handle, offset, options, deadline, other));
+	EXPECT(VMO_WAKE_U32, handle, offset, options, other, 0, 0, 0);
+	RESULT(hyper_vmo_wake_u32(handle, offset, options, other));
 	EXPECT(BYTE_CHANNEL_WRITE, handle, 0, 0, 0, 0, 0, 0);
 	STATUS(hyper_byte_channel_write(handle, NULL, 0));
 }

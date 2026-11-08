@@ -165,6 +165,20 @@ hyper_native_status_t hyper_vmar_map_file(hyper_native_handle_t vmar, hyper_nati
 					  const hyper_native_private_mapping_t *mapping,
 					  size_t mapping_size);
 hyper_call_result_t hyper_vmo_create_snapshot(hyper_native_handle_t vmo);
+/* Explicit shared AtomicU32 wait identity is (VMO object, offset), independent
+ * of mappings. Wait requires READ|WRITE; wake requires WRITE. Offset must be
+ * four-byte aligned and in bounds. Options and reserved arguments must be zero.
+ * All concurrent aliases must use aligned atomic uint32_t accesses; ordinary
+ * VMO byte reads/writes return BUSY while a shared wait retains admission.
+ * Wait mismatch returns OK. Deadline is absolute monotonic nanoseconds. Success
+ * is only a wake hint: callers must reload their condition. Wake returns the
+ * actual number woken. Count zero is valid. Handle closure/unmap do not cancel
+ * an already registered wait. Snapshot/executable/observation VMOs are rejected.
+ */
+hyper_native_status_t hyper_vmo_wait_u32(hyper_native_handle_t vmo, uint64_t offset,
+					 uint32_t expected, uint64_t deadline, uint64_t options);
+hyper_call_result_t hyper_vmo_wake_u32(hyper_native_handle_t vmo, uint64_t offset, uint32_t count,
+				       uint64_t options);
 hyper_native_status_t hyper_vmar_map_private(hyper_native_handle_t vmar,
 					     hyper_native_handle_t snapshot,
 					     const hyper_native_private_mapping_t *mapping,

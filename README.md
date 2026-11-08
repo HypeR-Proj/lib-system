@@ -164,6 +164,19 @@ If destruction fails, ownership and the reserved address range remain until a
 successful retry; an already unmapped payload cannot be queried or grown.
 Failed internal cleanup is retained and retried on subsequent creation/release.
 
+`hyper_vmo_wait_u32(vmo, offset, expected, deadline, options)` waits on an
+explicit shared VMO word; `hyper_vmo_wake_u32(vmo, offset, count, options)` returns
+the actual number woken. Options must be zero. Unlike private address-based
+atomic waits, their identity is shared across processes and unrelated mapping
+addresses. Wait requires READ|WRITE and matching atomic uint32_t accesses through
+all concurrent aliases; wake requires WRITE and does not read the word. Offsets
+are four-byte aligned and bounded by an ordinary writable RAM VMO. Mismatch is
+success, deadlines are absolute, and successful waiters must reload their
+condition. Handle close and unmap do not cancel admitted waits. Their retained
+admission excludes ordinary VMO byte access, snapshots and exclusive hardware
+ownership until wake, timeout or cancellation releases the wait. An existing
+hardware lease blocks wait admission; wake can still return zero.
+
 Rust applications can use `hyper_os::thread::current_stack()` and
 `grow_current_stack()` on main or `std::thread` workers. Ordinary Rust lifetime,
 TLS destruction and join semantics remain unchanged. Guards detect accesses to
