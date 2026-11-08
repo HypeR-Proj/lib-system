@@ -177,6 +177,16 @@ admission excludes ordinary VMO byte access, snapshots and exclusive hardware
 ownership until wake, timeout or cancellation releases the wait. An existing
 hardware lease blocks wait admission; wake can still return zero.
 
+`hyper_executable_publish(authority, source, options)` publishes a full immutable
+executable copy of an ordinary writable RAM VMO. Options must be zero. The
+authority requires CREATE_EXECUTABLE and the source requires READ; active
+writable mappings, shared atomic waits and hardware ownership return BUSY.
+Success returns a fresh non-writable VMO and its size, preserving both inputs.
+The caller pays for the new backing, and instruction-cache synchronization
+completes before publication. Explicit userspace capability routing selects
+which components may publish; the ordinary object factory cannot mint this
+authority. Callers remain responsible for generated code validity and lifetime.
+
 Rust applications can use `hyper_os::thread::current_stack()` and
 `grow_current_stack()` on main or `std::thread` workers. Ordinary Rust lifetime,
 TLS destruction and join semantics remain unchanged. Guards detect accesses to

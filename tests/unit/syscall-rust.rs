@@ -498,6 +498,12 @@ fn transport(status: HyperNativeStatus) {
             [offset, options as u64, other, 0, 0, 0]
         );
         result(sys::vmo_wake_u32(handle, offset, options, other), status);
+        expect!(
+            HYPER_NATIVE_OP_EXECUTABLE_PUBLISH,
+            handle,
+            [other, offset, 0, 0, 0, 0]
+        );
+        result(sys::executable_publish(handle, other, offset), status);
     }
 }
 
