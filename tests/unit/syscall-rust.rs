@@ -482,6 +482,22 @@ fn transport(status: HyperNativeStatus) {
         );
         assert_eq!(sys::atomic_wait(&word, options, deadline), status);
         check_consumed();
+        expect!(
+            HYPER_NATIVE_OP_VMO_WAIT_U32,
+            handle,
+            [offset, options as u64, deadline, other, 0, 0]
+        );
+        assert_eq!(
+            sys::vmo_wait_u32(handle, offset, options, deadline, other),
+            status
+        );
+        check_consumed();
+        expect!(
+            HYPER_NATIVE_OP_VMO_WAKE_U32,
+            handle,
+            [offset, options as u64, other, 0, 0, 0]
+        );
+        result(sys::vmo_wake_u32(handle, offset, options, other), status);
     }
 }
 
