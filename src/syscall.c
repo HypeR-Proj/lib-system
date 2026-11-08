@@ -198,6 +198,13 @@ hyper_call_result_t hyper_vmo_create_snapshot(hyper_native_handle_t vmo)
 	return hyper_native_invoke6(vmo, HYPER_NATIVE_OP_VMO_CREATE_SNAPSHOT, 0, 0, 0, 0, 0, 0);
 }
 
+hyper_call_result_t hyper_executable_publish(hyper_native_handle_t authority,
+					     hyper_native_handle_t source, uint64_t options)
+{
+	return hyper_native_invoke6(authority, HYPER_NATIVE_OP_EXECUTABLE_PUBLISH, source, options,
+				    0, 0, 0, 0);
+}
+
 hyper_native_status_t hyper_vmo_wait_u32(hyper_native_handle_t vmo, uint64_t offset,
 					 uint32_t expected, uint64_t deadline, uint64_t options)
 {

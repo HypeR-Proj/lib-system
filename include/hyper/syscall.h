@@ -165,6 +165,15 @@ hyper_native_status_t hyper_vmar_map_file(hyper_native_handle_t vmar, hyper_nati
 					  const hyper_native_private_mapping_t *mapping,
 					  size_t mapping_size);
 hyper_call_result_t hyper_vmo_create_snapshot(hyper_native_handle_t vmo);
+/* Publish a coherent immutable executable copy of a writable RAM VMO. Requires
+ * authority CREATE_EXECUTABLE and source READ. Options must be zero. Active
+ * writable mappings, shared waits and hardware leases return BUSY. Success
+ * returns a new non-writable VMO in value0 and its byte size in value1; source
+ * remains owned and unchanged. Publication is charged to the caller, and all
+ * instruction-cache synchronization precedes the successful result.
+ */
+hyper_call_result_t hyper_executable_publish(hyper_native_handle_t authority,
+					     hyper_native_handle_t source, uint64_t options);
 /* Explicit shared AtomicU32 wait identity is (VMO object, offset), independent
  * of mappings. Wait requires READ|WRITE; wake requires WRITE. Offset must be
  * four-byte aligned and in bounds. Options and reserved arguments must be zero.

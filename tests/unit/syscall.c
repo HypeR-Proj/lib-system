@@ -155,6 +155,8 @@ static void transport(hyper_native_status_t status)
 	STATUS(hyper_vmo_wait_u32(handle, offset, options, deadline, other));
 	EXPECT(VMO_WAKE_U32, handle, offset, options, other, 0, 0, 0);
 	RESULT(hyper_vmo_wake_u32(handle, offset, options, other));
+	EXPECT(EXECUTABLE_PUBLISH, handle, other, offset, 0, 0, 0, 0);
+	RESULT(hyper_executable_publish(handle, other, offset));
 	EXPECT(BYTE_CHANNEL_WRITE, handle, 0, 0, 0, 0, 0, 0);
 	STATUS(hyper_byte_channel_write(handle, NULL, 0));
 }
