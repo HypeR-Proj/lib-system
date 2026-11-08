@@ -20,6 +20,9 @@ static uint64_t next_thread = 2, next_registration = 100;
 static unsigned allocated_stacks, live_registrations, registration_limit = 1024;
 static int fail_start, fail_add;
 static size_t smallest_requested_stack = SIZE_MAX;
+static hyper_native_wait_set_event_t batch_events[16];
+static hyper_call_result_t batch_result;
+static unsigned batch_calls;
 
 hyper_native_status_t hyper_thread_set_current_name(const void *name, size_t length)
 {
@@ -126,13 +129,14 @@ hyper_call_result_t hyper_wait_set_remove(uint64_t set, uint64_t registration)
 	__builtin_trap(); /* Never remove an already removed subscription. */
 }
 
-hyper_call_result_t hyper_wait_set_wait(uint64_t set, uint64_t deadline, void *out, size_t size)
+hyper_call_result_t hyper_wait_set_wait_batch(uint64_t set, uint64_t deadline, void *out,
+					      size_t capacity, size_t size, uint64_t options)
 {
-	(void)set;
-	(void)deadline;
-	(void)out;
-	(void)size;
-	__builtin_trap();
+	assert(set == 1 && deadline == UINT64_MAX && capacity == 16);
+	assert(size == sizeof(batch_events[0]) && options == 0);
+	++batch_calls;
+	memcpy(out, batch_events, sizeof(batch_events));
+	return batch_result;
 }
 
 hyper_call_result_t hyper_thread_create(uint64_t entry, uint64_t stack, uint64_t tls,
@@ -262,6 +266,37 @@ int main(void)
 	id = terminate(b);
 	completed_registration(id);
 	hyper_runtime_thread_release((uintptr_t)a);
+	clean();
+
+	/* One batch can include a stale joined registration and a current detached
+	 * exit. Only the returned prefix is consumed, even if its tail is garbage. */
+	registration_limit = 1024;
+	a = spawn();
+	uint64_t joined = terminate(a);
+	assert(hyper_runtime_thread_join((uintptr_t)a) == 0);
+	b = spawn();
+	uint64_t detached = terminate(b);
+	hyper_runtime_thread_release((uintptr_t)b);
+	batch_events[0] = (hyper_native_wait_set_event_t){
+		joined, HYPER_NATIVE_SIGNAL_THREAD_TERMINATED | (UINT64_C(1) << 63), 1};
+	batch_events[1] =
+		(hyper_native_wait_set_event_t){detached, HYPER_NATIVE_SIGNAL_THREAD_TERMINATED, 2};
+	batch_events[2] = (hyper_native_wait_set_event_t){0, 0, UINT64_MAX};
+	batch_result = (hyper_call_result_t){0, 2, 0};
+	assert(reap_notifications() == 0 && batch_calls == 1);
+	clean();
+
+	/* Invalid counts/records cannot make the reaper index beyond its buffer. */
+	batch_result.value0 = 17;
+	assert(reap_notifications() == HYPER_NATIVE_STATUS_INTERNAL);
+	batch_result.value0 = 0;
+	assert(reap_notifications() == HYPER_NATIVE_STATUS_INTERNAL);
+	batch_result.value0 = 3;
+	assert(reap_notifications() == HYPER_NATIVE_STATUS_INTERNAL);
+	batch_result = (hyper_call_result_t){0, 1, 1};
+	assert(reap_notifications() == HYPER_NATIVE_STATUS_INTERNAL);
+	batch_result = (hyper_call_result_t){HYPER_NATIVE_STATUS_PEER_CLOSED, 0, 0};
+	assert(reap_notifications() == HYPER_NATIVE_STATUS_PEER_CLOSED);
 	clean();
 	return 0;
 }

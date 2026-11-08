@@ -335,3 +335,17 @@ python3 project.py test lib-system
 
 Paths in the documentation are relative to the repo-managed workspace root.
 Edit this repository and prepare the workspace again before building.
+
+
+## Batched wait-set delivery
+
+`hyper_wait_set_wait_batch` accepts an absolute deadline, output pointer,
+capacity (1 through 64), record byte stride (eight-byte aligned, 24 through
+4096), and options (currently zero). Success returns the consumed count in
+`value0` and zero in `value1`. Only that prefix is valid: a later copy failure
+can leave the next record partially written without consuming its event.
+Each valid record contains the existing wait-set event prefix with zeroed
+extension bytes. The call waits for the first event, then drains available
+notifications without waiting for a full batch. `hyper_wait_set_wait` retains
+its single-event contract. The runtime thread reaper consumes up to 16 exits
+per invocation and tolerates notifications for registrations already joined.

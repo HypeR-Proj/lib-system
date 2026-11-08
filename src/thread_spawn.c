@@ -103,6 +103,26 @@ static void completed_registration(uint64_t registration)
 		reclaim(token);
 }
 
+/* A burst of exits needs one wait rather than one syscall per dead thread. */
+static int64_t reap_notifications(void)
+{
+	hyper_native_wait_set_event_t events[16];
+	hyper_call_result_t result = hyper_wait_set_wait_batch(termination_set, UINT64_MAX, events,
+							       16, sizeof(events[0]), 0);
+	if (result.status != HYPER_NATIVE_STATUS_OK)
+		return result.status;
+	if (!result.value0 || result.value0 > 16 || result.value1)
+		return HYPER_NATIVE_STATUS_INTERNAL;
+	for (size_t i = 0; i < result.value0; ++i) {
+		if (!events[i].registration ||
+		    !(events[i].signals & HYPER_NATIVE_SIGNAL_THREAD_TERMINATED))
+			return HYPER_NATIVE_STATUS_INTERNAL;
+	}
+	for (size_t i = 0; i < result.value0; ++i)
+		completed_registration(events[i].registration);
+	return HYPER_NATIVE_STATUS_OK;
+}
+
 static _Noreturn void reaper(void *argument)
 {
 	if (hyper_runtime_thread_attach_stack(argument) != HYPER_NATIVE_STATUS_OK)
@@ -110,13 +130,9 @@ static _Noreturn void reaper(void *argument)
 	/* This runtime-owned worker has no language-level Thread/Builder. */
 	(void)hyper_thread_set_current_name("thread-reaper", sizeof("thread-reaper") - 1);
 	for (;;) {
-		hyper_native_wait_set_event_t event;
-		hyper_call_result_t result =
-			hyper_wait_set_wait(termination_set, UINT64_MAX, &event, sizeof(event));
-		if (result.status != HYPER_NATIVE_STATUS_OK ||
-		    !(event.signals & HYPER_NATIVE_SIGNAL_THREAD_TERMINATED))
-			hyper_process_exit(HYPER_NATIVE_STATUS_INTERNAL);
-		completed_registration(event.registration);
+		int64_t status = reap_notifications();
+		if (status != HYPER_NATIVE_STATUS_OK)
+			hyper_process_exit(status);
 	}
 }
 
