@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <hyper/startup.h>
+#include <hyper/random.h>
 #include <hyper/launch.h>
 #include <hyper/syscall.h>
 
@@ -9,6 +10,7 @@
  * explicitly taken and closed by Native application code. No ambient
  * authority is created: an input must authorize duplication. */
 static const uint32_t purposes[] = {
+	HYPER_RANDOM_CLIENT,
 	HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_ROOT_DIRECTORY,
 	UINT32_C(0x80040001), /* conventional working directory */
 	HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_TASK_FACTORY,
