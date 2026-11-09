@@ -50,6 +50,13 @@ static void transport(hyper_native_status_t status)
 	hyper_native_private_mapping_t mapping = {0};
 	EXPECT(VMAR_MAP_FILE, handle, other, loader, (uintptr_t)&mapping, sizeof(mapping), 0, 0);
 	STATUS(hyper_vmar_map_file(handle, other, loader, &mapping, sizeof(mapping)));
+	hyper_native_shared_file_mapping_t shared_mapping = {0};
+	EXPECT(VMAR_MAP_FILE_SHARED, handle, other, (uintptr_t)&shared_mapping,
+	       sizeof(shared_mapping), 0, 0, 0);
+	STATUS(hyper_vmar_map_file_shared(handle, other, &shared_mapping, sizeof(shared_mapping)));
+	hyper_native_shared_file_sync_t shared_sync = {0};
+	EXPECT(VMAR_SYNC_FILE_RANGE, handle, (uintptr_t)&shared_sync, sizeof(shared_sync), 0, 0, 0, 0);
+	STATUS(hyper_vmar_sync_file_range(handle, &shared_sync, sizeof(shared_sync)));
 	EXPECT(FILESYSTEM_SWITCH_ROOT, handle, (uintptr_t)&root_switch, sizeof(root_switch), 0, 0,
 	       0, 0);
 	RESULT(hyper_filesystem_switch_root(handle, &root_switch,

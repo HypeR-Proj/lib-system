@@ -1055,6 +1055,24 @@ hyper_native_status_t hyper_vmar_map_file(hyper_native_handle_t vmar, hyper_nati
 		.status;
 }
 
+hyper_native_status_t hyper_vmar_map_file_shared(
+	hyper_native_handle_t vmar, hyper_native_handle_t file,
+	const hyper_native_shared_file_mapping_t *mapping, size_t mapping_size)
+{
+	return hyper_native_invoke6(vmar, HYPER_NATIVE_OP_VMAR_MAP_FILE_SHARED, file,
+				    (uintptr_t)mapping, mapping_size, 0, 0, 0)
+		.status;
+}
+
+hyper_native_status_t hyper_vmar_sync_file_range(
+	hyper_native_handle_t vmar, const hyper_native_shared_file_sync_t *sync,
+	size_t sync_size)
+{
+	return hyper_native_invoke6(vmar, HYPER_NATIVE_OP_VMAR_SYNC_FILE_RANGE,
+				    (uintptr_t)sync, sync_size, 0, 0, 0, 0)
+		.status;
+}
+
 hyper_native_status_t hyper_process_builder_set_memory_lock(hyper_native_handle_t builder,
 							    int enabled)
 {

@@ -164,6 +164,15 @@ hyper_native_status_t hyper_vmar_map_file(hyper_native_handle_t vmar, hyper_nati
 					  hyper_native_handle_t protection,
 					  const hyper_native_private_mapping_t *mapping,
 					  size_t mapping_size);
+/* Shared file bytes retain their file authority after the File handle closes.
+ * Mapping does not imply residency or synchronization; executable access and
+ * synchronous-only filesystem providers are unsupported. */
+hyper_native_status_t hyper_vmar_map_file_shared(
+	hyper_native_handle_t vmar, hyper_native_handle_t file,
+	const hyper_native_shared_file_mapping_t *mapping, size_t mapping_size);
+hyper_native_status_t hyper_vmar_sync_file_range(
+	hyper_native_handle_t vmar, const hyper_native_shared_file_sync_t *sync,
+	size_t sync_size);
 hyper_call_result_t hyper_vmo_create_snapshot(hyper_native_handle_t vmo);
 /* Publish a coherent immutable executable copy of a writable RAM VMO. Requires
  * authority CREATE_EXECUTABLE and source READ. Options must be zero. Active

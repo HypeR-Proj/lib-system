@@ -225,6 +225,62 @@ fn transport(status: HyperNativeStatus) {
             status
         );
         check_consumed();
+        let shared_mapping = HyperNativeSharedFileMapping {
+            file_offset: 0,
+            address: 0,
+            length: 0,
+            permissions: 0,
+            options: 0,
+            reserved0: 0,
+            reserved1: 0,
+        };
+        expect!(
+            HYPER_NATIVE_OP_VMAR_MAP_FILE_SHARED,
+            handle,
+            [
+                other,
+                &shared_mapping as *const _ as u64,
+                core::mem::size_of_val(&shared_mapping) as u64,
+                0,
+                0,
+                0
+            ]
+        );
+        assert_eq!(
+            sys::vmar_map_file_shared(
+                handle,
+                other,
+                &shared_mapping,
+                core::mem::size_of_val(&shared_mapping)
+            ),
+            status
+        );
+        check_consumed();
+        let shared_sync = HyperNativeSharedFileSync {
+            address: 0,
+            length: 0,
+            scope: 0,
+            options: 0,
+            reserved0: 0,
+            reserved1: 0,
+        };
+        expect!(
+            HYPER_NATIVE_OP_VMAR_SYNC_FILE_RANGE,
+            handle,
+            [
+                &shared_sync as *const _ as u64,
+                core::mem::size_of_val(&shared_sync) as u64,
+                0,
+                0,
+                0,
+                0
+            ]
+        );
+        assert_eq!(
+            sys::vmar_sync_file_range(handle, &shared_sync, core::mem::size_of_val(&shared_sync)),
+            status
+        );
+        check_consumed();
         let request = HyperNativeFilesystemRootSwitch {
             new_root: 0,
             new_root_length: 0,

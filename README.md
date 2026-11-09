@@ -197,6 +197,17 @@ completes before publication. Explicit userspace capability routing selects
 which components may publish; the ordinary object factory cannot mint this
 authority. Callers remain responsible for generated code validity and lifetime.
 
+`hyper_vmar_map_file_shared(vmar, file, mapping, mapping_size)` maps an exact
+range of existing complete file pages with coherent ordinary file I/O. VMAR
+needs MAP, File needs READ and additionally WRITE for shared writable authority.
+Executable access, private zero-fill semantics and synchronous-only filesystem
+providers are unsupported. Extensible request options/reserved bytes are zero.
+`hyper_vmar_sync_file_range(vmar, sync, sync_size)` uses retained mapping authority
+even after File closure, accepting DATA or ALL scope, never VOLUME. It may fence
+the whole file but does not unconditionally checkpoint. Unmap is not fsync.
+Shared memory access requires caller synchronization; these calls do not make
+unsynchronized C/Rust data races safe or provide POSIX mmap compatibility.
+
 Rust applications can use `hyper_os::thread::current_stack()` and
 `grow_current_stack()` on main or `std::thread` workers. Ordinary Rust lifetime,
 TLS destruction and join semantics remain unchanged. Guards detect accesses to
