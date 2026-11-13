@@ -35,6 +35,7 @@ set(HYPER_RUNTIME_SOURCES
     src/arch/${HYPER_ARCH}/stack.S
     src/capabilities.c
     src/directory.c
+    src/shared-mutex.c
     src/thread.c
     src/thread_spawn.c
     src/stack.c

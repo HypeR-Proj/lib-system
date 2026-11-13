@@ -205,6 +205,45 @@ hyper_call_result_t hyper_executable_publish(hyper_native_handle_t authority,
 				    0, 0, 0, 0);
 }
 
+hyper_call_result_t hyper_sync_domain_create(uint64_t options)
+{
+    return hyper_native_invoke6(hyper_native_object_factory(), HYPER_NATIVE_OP_SYNC_DOMAIN_CREATE,
+                                options, 0, 0, 0, 0, 0);
+}
+
+hyper_native_status_t hyper_sync_domain_bind(hyper_native_handle_t domain,
+        const hyper_native_sync_domain_binding_t *request, size_t request_size)
+{
+    return hyper_native_invoke6(domain, HYPER_NATIVE_OP_SYNC_DOMAIN_BIND,
+                                (uintptr_t)request, request_size, 0, 0, 0, 0).status;
+}
+
+hyper_call_result_t hyper_sync_domain_join(hyper_native_handle_t domain, uint64_t options)
+{
+    return hyper_native_invoke6(domain, HYPER_NATIVE_OP_SYNC_DOMAIN_JOIN, options, 0, 0, 0, 0, 0);
+}
+
+hyper_call_result_t hyper_sync_domain_owner_query(hyper_native_handle_t domain, uint64_t token,
+                                                 uint64_t options)
+{
+    return hyper_native_invoke6(domain, HYPER_NATIVE_OP_SYNC_DOMAIN_OWNER_QUERY,
+                                token, options, 0, 0, 0, 0);
+}
+
+hyper_call_result_t hyper_sync_domain_wait_u64(hyper_native_handle_t domain,
+        const hyper_native_sync_domain_wait_t *request, size_t request_size)
+{
+    return hyper_native_invoke6(domain, HYPER_NATIVE_OP_SYNC_DOMAIN_WAIT_U64,
+                                (uintptr_t)request, request_size, 0, 0, 0, 0);
+}
+
+hyper_call_result_t hyper_sync_domain_wake_u64(hyper_native_handle_t domain,
+        hyper_native_handle_t vmo, uint64_t offset, uint32_t count, uint64_t options)
+{
+    return hyper_native_invoke6(domain, HYPER_NATIVE_OP_SYNC_DOMAIN_WAKE_U64,
+                                vmo, offset, count, options, 0, 0);
+}
+
 hyper_native_status_t hyper_vmo_wait_u32(hyper_native_handle_t vmo, uint64_t offset,
 					 uint32_t expected, uint64_t deadline, uint64_t options)
 {

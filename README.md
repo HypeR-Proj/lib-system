@@ -393,3 +393,54 @@ extension bytes. The call waits for the first event, then drains available
 notifications without waiting for a full batch. `hyper_wait_set_wait` retains
 its single-event contract. The runtime thread reaper consumes up to 16 exits
 per invocation and tolerates notifications for registrations already joined.
+
+### Shared mutex owner death
+
+`hyper/shared-mutex.h` implements process-shared, non-recursive mutex control on
+an aligned atomic u64 in ordinary RAM. Create a `SyncDomain`, bind the control
+range with `SYNC_CONFIGURE` on both domain and VMO, and join once on each calling
+Thread. Delegate only operation rights to ordinary participants. Word waits and wakes
+require `SYNC_WAIT` and `SYNC_WAKE`; a domain has no object-level signal source
+and does not accept generic `WAIT` or `SIGNAL`. Cancellation Events retain their
+ordinary `WAIT` contract. Domain tokens
+observe actual Thread termination and never authorize controlling that Thread.
+VMO attribution remains fixed for its backing lifetime, including after handle
+closure. A domain may bind multiple ranges and VMOs.
+
+`hyper_shared_mutex_view` borrows the domain, VMO and mapped word; it checks
+operation authority without resetting shared memory. The caller must prove that
+the pointer aliases the specified VMO offset and keep these resources alive.
+Every alias uses aligned u64 atomics. Initialize a fresh word to zero before
+publication. Reinitializing a used slot requires external quiescence of every
+owner, waiter, recovery guard and possible future user.
+
+`hyper_shared_mutex_try_lock` is bounded and never parks.
+`hyper_shared_mutex_lock` accepts an absolute monotonic deadline, with
+`UINT64_MAX` selecting an indefinite wait, and an optional cancellation Event.
+Cancellation is one-shot: retain the Event and all borrowed handles throughout
+acquisition, and never clear its signaled level while any acquisition can still
+observe it. Reusing an Event requires quiescence of all previous users.
+One initial acquisition attempt may succeed even if the deadline/cancellation
+already applies; every later retry checks both. Successful CAS commits ownership
+and cannot be reported as an unowned timeout. Uncontended locking and unlocking
+perform no syscall after participant/view initialization.
+
+The result distinguishes normal acquisition, `HYPER_SHARED_MUTEX_OWNER_DIED`
+with exclusive recovery ownership, and `HYPER_SHARED_MUTEX_NOT_RECOVERABLE`
+without ownership. Ordinary errors likewise hold no mutex. Owner-death recovery
+publishes completed writes but does not repair partially modified data: inspect
+raw or crash-valid payload layouts, repair them, then call
+`hyper_shared_mutex_mark_consistent`. Unlocking a recovery guard without that
+confirmation permanently marks the instance unrecoverable. If the recovery owner
+itself dies, the next owner receives recovery authority again.
+
+Participants and guards are Thread-affine C values. Do not copy active guards,
+use another Thread's participant, or pass an already active guard as acquisition
+output. C cannot enforce these ownership preconditions. Unlock validates the
+owned control word before modifying it. A broken ownership invariant or failed
+notification after committed release terminates the process, allowing the
+kernel's domain-death notification to preserve waiter progress. Ordinary unlock
+wakes one; failed/cancelled selected waiters relay that wake. Thread exit can
+notify all eligible waiters in its domain, including waiters whose remembered
+owner predates a later handoff. This exceptional fanout is separate from the
+syscall-free uncontended path.

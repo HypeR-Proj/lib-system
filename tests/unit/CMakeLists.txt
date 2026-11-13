@@ -172,3 +172,11 @@ target_compile_features(hyper-random-retention-test PRIVATE c_std_17)
 target_compile_options(hyper-random-retention-test PRIVATE -Wall -Wextra -Werror -UNDEBUG)
 target_include_directories(hyper-random-retention-test PRIVATE ../../include ${HYPER_ABI_INCLUDE_DIR})
 add_test(NAME random-capability-retention COMMAND hyper-random-retention-test)
+
+# The fixture includes the production source to instrument one atomic load;
+# the compiler still tracks that source as an ordinary include dependency.
+add_executable(hyper-shared-mutex-test shared-mutex.c)
+target_compile_features(hyper-shared-mutex-test PRIVATE c_std_17)
+target_compile_options(hyper-shared-mutex-test PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+target_include_directories(hyper-shared-mutex-test PRIVATE ../../include ${HYPER_ABI_INCLUDE_DIR})
+add_test(NAME shared-mutex-owner-death COMMAND hyper-shared-mutex-test)

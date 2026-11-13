@@ -193,6 +193,25 @@ hyper_call_result_t hyper_executable_publish(hyper_native_handle_t authority,
  * actual number woken. Count zero is valid. Handle closure/unmap do not cancel
  * an already registered wait. Snapshot/executable/observation VMOs are rejected.
  */
+/* SyncDomain owner tokens observe actual Thread death, not stop requests.
+ * Word operations require SYNC_WAIT/SYNC_WAKE, not generic WAIT/SIGNAL. A domain
+ * has no object-level signals; cancellation Events still require WAIT.
+ * Binding requires SYNC_CONFIGURE on both domain and VMO. Tokens are never
+ * recycled. Query DEAD publishes completed owner writes, not payload consistency.
+ * Wait returns RECHECK or OWNER_EXITED, never mutex ownership. Cancellation is
+ * an optional Event with WAIT; only its SIGNALED level is used. All options,
+ * reserved fields, unknown record tails and unused registers must be zero. */
+hyper_call_result_t hyper_sync_domain_create(uint64_t options);
+hyper_native_status_t hyper_sync_domain_bind(hyper_native_handle_t domain,
+        const hyper_native_sync_domain_binding_t *request, size_t request_size);
+hyper_call_result_t hyper_sync_domain_join(hyper_native_handle_t domain, uint64_t options);
+hyper_call_result_t hyper_sync_domain_owner_query(hyper_native_handle_t domain, uint64_t token,
+                                                 uint64_t options);
+hyper_call_result_t hyper_sync_domain_wait_u64(hyper_native_handle_t domain,
+        const hyper_native_sync_domain_wait_t *request, size_t request_size);
+hyper_call_result_t hyper_sync_domain_wake_u64(hyper_native_handle_t domain,
+        hyper_native_handle_t vmo, uint64_t offset, uint32_t count, uint64_t options);
+
 hyper_native_status_t hyper_vmo_wait_u32(hyper_native_handle_t vmo, uint64_t offset,
 					 uint32_t expected, uint64_t deadline, uint64_t options);
 hyper_call_result_t hyper_vmo_wake_u32(hyper_native_handle_t vmo, uint64_t offset, uint32_t count,
